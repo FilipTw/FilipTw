@@ -63,8 +63,8 @@ CONFIG = {
     "contact_line": "Let\u2019s build something together.",
     # (label, text shown, link). Replace the placeholders with your own.
     "links": [
-        ("Email", "hello@example.com", "mailto:hello@example.com"),
-        ("LinkedIn", "linkedin.com/in/your-profile", "https://www.linkedin.com/in/your-profile/"),
+        ("Email", "ft@gmail.com", "mailto:filip.twardawa@gmail.com"),
+        ("LinkedIn", "linkedin.com/in/ft-profile", "https://www.linkedin.com"),
         ("GitHub", "github.com/FilipTw", "https://github.com/FilipTw"),
     ],
     # Selected work shows your pinned repositories (or the most starred ones).
