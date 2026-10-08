@@ -77,11 +77,11 @@ CONFIG = {
 THEMES = {
     "light": {
         "page": "#FFFFFF", "ink": "#0A0B0D", "muted": "#676C75", "faint": "#A5AAB2",
-        "line": "#E2E4E8", "contour": "#CDD1D8", "accent": "#2B3BFF", "cell": "#EEF0F3",
+        "line": "#E2E4E8", "contour": "#CDD1D8", "accent": "#2B3BFF", "cell": "#E8EBEF",
     },
     "dark": {
         "page": "#0D1117", "ink": "#EEF1F5", "muted": "#8C939D", "faint": "#565D67",
-        "line": "#262C35", "contour": "#28303B", "accent": "#7D87FF", "cell": "#161B22",
+        "line": "#262C35", "contour": "#28303B", "accent": "#7D87FF", "cell": "#1D232C",
     },
 }
 W = 1200          # every asset shares this width, so edges align in the README
@@ -699,44 +699,48 @@ def build_activity(F, t, data, today):
         body.append(c.text(F["display"], fmt(value), x, num_base, 60, t["ink"], -0.03, optical=True))
         body.append(c.text(F["text"], label, x, num_base + 36, 16, t["muted"]))
 
-    # contribution calendar
+    # contribution calendar: full width, like the hero, so the cells stay legible
     days = data.get("days", [])[-371:]
     y_cal = num_base + 112
-    span = W - COL
     weeks = []
     for date, count, level in days:
         d = dt.date.fromisoformat(date)
         if not weeks or d.isoweekday() % 7 == 0:
             weeks.append([])
         weeks[-1].append((d, count, level))
-    pitch = span / max(len(weeks), 53)
-    cell = pitch * 0.8
-    ramp = [t["cell"]] + [mix(t["cell"], t["accent"], a) for a in (0.32, 0.55, 0.78, 1.0)]
-    cells, months, last_month = [], [], None
+    pitch = W / max(len(weeks), 53)
+    cell = pitch * 0.82
+    ramp = [t["cell"]] + [mix(t["cell"], t["accent"], a) for a in (0.4, 0.62, 0.82, 1.0)]
+    cols, months, last_month = [], [], None
     for wi, week in enumerate(weeks):
-        x = COL + wi * pitch
-        for d, count, level in week:
-            y = y_cal + 26 + (d.isoweekday() % 7) * pitch
-            cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell:.1f}" height="{cell:.1f}" '
-                         f'rx="2.5" fill="{ramp[level]}"/>')
+        x = wi * pitch
+        rects = "".join(f'<rect x="{x:.1f}" y="{y_cal + 30 + (d.isoweekday() % 7) * pitch:.1f}" '
+                        f'width="{cell:.1f}" height="{cell:.1f}" rx="3.5" fill="{ramp[level]}"/>'
+                        for d, count, level in week)
+        cols.append(f'<g class="wk" style="animation-delay:{0.15 + wi * 0.02:.2f}s">{rects}</g>')
         first = week[0][0]
         if first.month != last_month and first.day <= 7 and wi < len(weeks) - 2:
-            months.append(c.text(F["text"], first.strftime("%b"), x, y_cal + 12, 14, t["muted"]))
+            months.append(c.text(F["text"], first.strftime("%b"), x, y_cal + 14, 15, t["muted"]))
             last_month = first.month
-    body += months + cells
-    y_leg = y_cal + 26 + 7 * pitch + 28
-    lx = W - 5 * (cell + 4) - c.measure(F["text"], "More", 14) - 10
+    body += months + cols
+    c.css.append(".wk{animation:wk 1s cubic-bezier(.19,1,.22,1) both}"
+                 "@keyframes wk{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}"
+                 "@media (prefers-reduced-motion:reduce){.wk{animation:none!important}}")
+    y_leg = y_cal + 30 + 7 * pitch + 30
+    key = 13
+    lx = W - 5 * (key + 4) - c.measure(F["text"], "More", 14) - 10
     body.append(c.text(F["text"], "Less", lx - 10, y_leg, 14, t["muted"], anchor="end"))
     for i, col in enumerate(ramp):
-        body.append(f'<rect x="{lx + i * (cell + 4):.1f}" y="{y_leg - cell + 2:.1f}" width="{cell:.1f}" '
-                    f'height="{cell:.1f}" rx="2.5" fill="{col}"/>')
+        body.append(f'<rect x="{lx + i * (key + 4):.1f}" y="{y_leg - key + 1:.1f}" width="{key}" '
+                    f'height="{key}" rx="2.5" fill="{col}"/>')
     body.append(c.text(F["text"], "More", W, y_leg, 14, t["muted"], anchor="end"))
-    body.append(c.text(F["text"], f"Updated {today.day} {today:%B %Y}", COL, y_leg, 14, t["muted"]))
+    body.append(c.text(F["text"], f"Updated {today.day} {today:%B %Y}", 0, y_leg, 14, t["muted"]))
 
     # languages
     langs = sorted(data.get("languages", {}).items(), key=lambda kv: -kv[1])
-    y = y_leg + 78
+    y = y_leg + 24
     if langs:
+        y = y_leg + 78
         total = sum(v for _, v in langs)
         top = langs[:5]
         rest = total - sum(v for _, v in top)
@@ -747,7 +751,7 @@ def build_activity(F, t, data, today):
         body.append(c.text(F["text"], "Most used languages", COL, y - 18, 14, t["muted"]))
         x = COL
         gap = 4
-        usable = span - gap * (len(top) - 1)
+        usable = W - COL - gap * (len(top) - 1)
         for i, (name, v) in enumerate(top):
             w = usable * v / total
             body.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 2):.1f}" height="10" rx="2" '
