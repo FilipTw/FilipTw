@@ -629,47 +629,56 @@ def fetch_graphql(user, token):
     }
 
 
-def fetch_public(user, token=None):
-    """Fallback: the public contribution calendar plus the REST API."""
+def fetch_calendar(user):
+    """The public contribution calendar: the same numbers the profile page shows."""
     page = http(f"https://github.com/users/{user}/contributions", accept="text/html")
     cells = re.findall(r'data-date="(\d{4}-\d\d-\d\d)" id="([\w-]+)" data-level="(\d)"', page)
+    if not cells:
+        raise RuntimeError("no calendar cells on the page")
     tips = dict(re.findall(r'for="([\w-]+)"[^>]*>([^<]*)</tool-tip>', page))
     days = []
     for date, cid, level in cells:
-        m = re.match(r"(\d+) contribution", tips.get(cid, ""))
-        days.append((date, int(m.group(1)) if m else 0, int(level)))
+        m = re.match(r"([\d,]+) contribution", tips.get(cid, ""))
+        days.append((date, int(m.group(1).replace(",", "")) if m else 0, int(level)))
     days.sort()
-    data = {"days": days, "contributions": sum(d[1] for d in days)}
-    try:
-        profile = json.loads(http(f"https://api.github.com/users/{user}", token))
-        repos = json.loads(http(f"https://api.github.com/users/{user}/repos?per_page=100&type=owner", token))
-        own = sorted((r for r in repos if not r["fork"]), key=lambda r: -r["stargazers_count"])
-        langs = {}
-        for r in own:
-            if r["language"]:
-                langs[r["language"]] = langs.get(r["language"], 0) + max(r["size"], 1)
-        data.update(
-            repos=len(own), followers=profile["followers"], languages=langs,
-            stars=sum(r["stargazers_count"] for r in own),
-            work=pick_work([{"name": r["name"], "description": r["description"], "url": r["html_url"],
-                             "stars": r["stargazers_count"], "language": r["language"]} for r in own], user))
-    except Exception as exc:  # unauthenticated rate limits are common
-        print(f"  REST API unavailable ({exc}); repository numbers left blank")
-    return data
+    return {"days": days, "contributions": sum(d[1] for d in days)}
+
+
+def fetch_rest(user, token=None):
+    """Fallback for the repository numbers when GraphQL is unavailable."""
+    profile = json.loads(http(f"https://api.github.com/users/{user}", token))
+    repos = json.loads(http(f"https://api.github.com/users/{user}/repos?per_page=100&type=owner", token))
+    own = sorted((r for r in repos if not r["fork"]), key=lambda r: -r["stargazers_count"])
+    langs = {}
+    for r in own:
+        if r["language"]:
+            langs[r["language"]] = langs.get(r["language"], 0) + max(r["size"], 1)
+    return {
+        "repos": len(own), "followers": profile["followers"], "languages": langs,
+        "stars": sum(r["stargazers_count"] for r in own),
+        "work": pick_work([{"name": r["name"], "description": r["description"], "url": r["html_url"],
+                            "stars": r["stargazers_count"], "language": r["language"]} for r in own], user),
+    }
 
 
 def fetch_activity(user):
     token = os.environ.get("GITHUB_TOKEN")
+    data = {}
     if token:
         try:
-            return fetch_graphql(user, token)
+            data = fetch_graphql(user, token)
         except Exception as exc:
-            print(f"  GraphQL failed ({exc}); falling back to public data")
+            print(f"  GraphQL failed ({exc}); falling back to the REST API")
+    if not data:
+        try:
+            data = fetch_rest(user, token)
+        except Exception as exc:  # unauthenticated rate limits are common
+            print(f"  REST API unavailable ({exc}); repository numbers left blank")
     try:
-        return fetch_public(user, token)
+        data.update(fetch_calendar(user))
     except Exception as exc:
-        print(f"  could not reach GitHub ({exc})")
-        return {}
+        print(f"  public calendar unavailable ({exc})")
+    return data
 
 
 def build_activity(F, t, data, today):
@@ -792,12 +801,14 @@ def write_readme(pieces):
 
 def main():
     F = fonts()
-    OUT.mkdir(exist_ok=True)
-    for old in OUT.glob("*.svg"):
-        old.unlink()
     today = dt.date.today()
     print("  fetching activity")
     data = fetch_activity(CONFIG["username"])
+    if os.environ.get("CI") and not ("days" in data and "repos" in data):
+        raise SystemExit("  incomplete data from GitHub; keeping the previous artwork")
+    OUT.mkdir(exist_ok=True)
+    for old in OUT.glob("*.svg"):
+        old.unlink()
     work = data.get("work", [])
     links = CONFIG["links"]
 
