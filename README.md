@@ -4,28 +4,32 @@
   to build.py and once a day for the live Activity numbers.
 -->
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/hero-dark.svg?v=dcf3b889" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/hero-light.svg?v=dcf3b889" width="100%" alt="Filip, Full-stack &amp; AI developer. I build backends, train models and ship the interfaces in between." /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-dark.svg?v=890f06e9" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-light.svg?v=890f06e9" width="100%" alt="Filip, Full-stack &amp; AI developer. I build backends, train models and ship the interfaces in between." /></picture>
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/about-dark.svg?v=d0c37071" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/about-light.svg?v=d0c37071" width="100%" alt="About. I’m Filip, a full-stack developer working where web software meets machine learning. I design APIs in Django and FastAPI, train models in PyTorch and build the React interfaces that put them in people’s hands." /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/about-dark.svg?v=d0c37071" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/about-light.svg?v=d0c37071" width="100%" alt="About. I’m Filip, a full-stack developer working where web software meets machine learning. I design APIs in Django and FastAPI, train models in PyTorch and build the React interfaces that put them in people’s hands." /></picture>
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/stack-dark.svg?v=899bb5bc" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/stack-light.svg?v=899bb5bc" width="100%" alt="Stack. Languages: Python, TypeScript, JavaScript, HTML. Backend: Django, FastAPI, Node.js. Machine learning: PyTorch, TensorFlow. Frontend: React, Next.js, Tailwind CSS. Data &amp; messaging: PostgreSQL, Redis, RabbitMQ. Cloud &amp; DevOps: AWS, Docker, GitHub Actions, Linux. Observability: Sentry, Prometheus. Workflow: Git, GitHub, GitLab, Postman. Editors &amp; notes: PyCharm, WebStorm, Notion" /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/stack-dark.svg?v=899bb5bc" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/stack-light.svg?v=899bb5bc" width="100%" alt="Stack. Languages: Python, TypeScript, JavaScript, HTML. Backend: Django, FastAPI, Node.js. Machine learning: PyTorch, TensorFlow. Frontend: React, Next.js, Tailwind CSS. Data &amp; messaging: PostgreSQL, Redis, RabbitMQ. Cloud &amp; DevOps: AWS, Docker, GitHub Actions, Linux. Observability: Sentry, Prometheus. Workflow: Git, GitHub, GitLab, Postman. Editors &amp; notes: PyCharm, WebStorm, Notion" /></picture>
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/activity-dark.svg?v=28a89b89" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/activity-light.svg?v=28a89b89" width="100%" alt="Activity: 446 contributions in the last year" /></picture>
+<a href="https://github.com/FilipTw/AI_Projects_In_Polish"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-dark.svg?v=a48e5d04" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-light.svg?v=a48e5d04" width="100%" alt="AI_Projects_In_Polish: Some simple projects from AI issues in translation into Polish." /></picture></a>
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/contact-dark.svg?v=ea4966f4" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/contact-light.svg?v=ea4966f4" width="100%" alt="Let’s build something together." /></picture>
-
-<a href="mailto:filip.twardawa@gmail.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/link-email-dark.svg?v=dd520146" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/link-email-light.svg?v=dd520146" width="100%" alt="Email: ft@egmail.com" /></picture></a>
-<a href="https://www.linkedin.com/in/your-profile/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/link-linkedin-dark.svg?v=fdb4cbd3" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/link-linkedin-light.svg?v=fdb4cbd3" width="100%" alt="LinkedIn: linkedin.com/in/ft" /></picture></a>
-<a href="https://github.com/FilipTw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/link-github-dark.svg?v=42ca7ed2" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/link-github-light.svg?v=42ca7ed2" width="100%" alt="GitHub: github.com/FilipTw" /></picture></a>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=9d898322" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=9d898322" width="100%" alt="Activity: 465 contributions in the last year" /></picture>
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/colophon-dark.svg?v=9919e0c6" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/HEAD/assets/colophon-light.svg?v=9919e0c6" width="100%" alt="Filip, 2026" /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/contact-dark.svg?v=ea4966f4" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/contact-light.svg?v=ea4966f4" width="100%" alt="Let’s build something together." /></picture>
+
+<a href="mailto:filip.twardawa@gmail.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/link-email-dark.svg?v=96217560" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/link-email-light.svg?v=96217560" width="100%" alt="Email: FilipTw@gmail.com" /></picture></a>
+<a href="https://www.linkedin.com/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/link-linkedin-dark.svg?v=6e4f8f37" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/link-linkedin-light.svg?v=6e4f8f37" width="100%" alt="LinkedIn: linkedin.com/in/FilipTw" /></picture></a>
+<a href="https://github.com/FilipTw?tab=repositories"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/link-github-dark.svg?v=4acdc561" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/link-github-light.svg?v=4acdc561" width="100%" alt="GitHub: github.com/FilipTw/repositories" /></picture></a>
+
+<br /><br />
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/colophon-dark.svg?v=9919e0c6" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/colophon-light.svg?v=9919e0c6" width="100%" alt="Filip, 2026" /></picture>
