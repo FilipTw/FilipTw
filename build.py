@@ -61,11 +61,11 @@ CONFIG = {
         ("Editors & notes", ["PyCharm", "WebStorm", "Notion"]),
     ],
     "contact_line": "Let\u2019s build something together.",
-    # (label, text shown, link). Replace the placeholders with your own.
+    # (label, text shown, link)
     "links": [
-        ("Email", "ft@gmail.com", "mailto:filip.twardawa@gmail.com"),
-        ("LinkedIn", "linkedin.com/in/ft-profile", "https://www.linkedin.com"),
-        ("GitHub", "github.com/FilipTw", "https://github.com/FilipTw"),
+        ("Email", "FilipTw@gmail.com", "mailto:filip.twardawa@gmail.com"),
+        ("LinkedIn", "linkedin.com/in/FilipTw", "https://www.linkedin.com/"),
+        ("GitHub", "github.com/FilipTw/repositories", "https://github.com/FilipTw?tab=repositories"),
     ],
     # Selected work shows your pinned repositories (or the most starred ones).
     "work_limit": 4,
