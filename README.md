@@ -4,7 +4,7 @@
   to build.py and once a day for the live Activity numbers.
 -->
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-dark.svg?v=890f06e9" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-light.svg?v=890f06e9" width="100%" alt="Filip, Full-stack &amp; AI developer. I build backends, train models and ship the interfaces in between." /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-dark.svg?v=dcf3b889" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-light.svg?v=dcf3b889" width="100%" alt="Filip, Full-stack &amp; AI developer. I build backends, train models and ship the interfaces in between." /></picture>
 
 <br /><br />
 
@@ -13,10 +13,6 @@
 <br /><br />
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/stack-dark.svg?v=899bb5bc" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/stack-light.svg?v=899bb5bc" width="100%" alt="Stack. Languages: Python, TypeScript, JavaScript, HTML. Backend: Django, FastAPI, Node.js. Machine learning: PyTorch, TensorFlow. Frontend: React, Next.js, Tailwind CSS. Data &amp; messaging: PostgreSQL, Redis, RabbitMQ. Cloud &amp; DevOps: AWS, Docker, GitHub Actions, Linux. Observability: Sentry, Prometheus. Workflow: Git, GitHub, GitLab, Postman. Editors &amp; notes: PyCharm, WebStorm, Notion" /></picture>
-
-<br /><br />
-
-<a href="https://github.com/FilipTw/AI_Projects_In_Polish"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-dark.svg?v=a48e5d04" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-light.svg?v=a48e5d04" width="100%" alt="AI_Projects_In_Polish: Some simple projects from AI issues in translation into Polish." /></picture></a>
 
 <br /><br />
 
