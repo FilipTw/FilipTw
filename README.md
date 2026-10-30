@@ -16,7 +16,12 @@
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=04a76ab9" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=04a76ab9" width="100%" alt="Activity: 488 contributions in the last year" /></picture>
+<a href="https://github.com/FilipTw/python-path"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-dark.svg?v=9802f232" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-light.svg?v=9802f232" width="100%" alt="python-path: " /></picture></a>
+<a href="https://github.com/FilipTw/AI_Projects_In_Polish"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-dark.svg?v=bd5a66ee" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-light.svg?v=bd5a66ee" width="100%" alt="AI_Projects_In_Polish: Some simple projects from AI issues in translation into Polish." /></picture></a>
+
+<br /><br />
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=c3430ddd" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=c3430ddd" width="100%" alt="Activity: 488 contributions in the last year" /></picture>
 
 <br /><br />
 
