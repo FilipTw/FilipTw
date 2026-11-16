@@ -21,7 +21,7 @@
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=340411d9" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=340411d9" width="100%" alt="Activity: 488 contributions in the last year" /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=f2825b48" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=f2825b48" width="100%" alt="Activity: 488 contributions in the last year" /></picture>
 
 <br /><br />
 
