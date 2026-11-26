@@ -118,7 +118,7 @@ THEMES: dict[str, Theme] = {
     },
 }
 W = 1200  # every asset shares this width, so edges align in the README
-COL = 300  # editorial grid: label column | content column
+COL = 300  # the Grid: the label column ends and the content column starts here
 FONT_SOURCES = {
     "mona-sans-latin-wdth-normal.woff2": ("@fontsource-variable/mona-sans", "5.3.0"),
     "monaspace-neon-latin-400-normal.woff2": ("@fontsource/monaspace-neon", "5.3.0"),
@@ -609,26 +609,27 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#  Editorial sections
+#  Editorial Sections, set on the Grid
 # ════════════════════════════════════════════════════════════════════════════
 def build_about(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas(F, t)
     body = c.head("About")
-    size, lh = 38, 50
-    lead = Type("text", size, "ink", -0.012)
+    lead, leading = Type("text", 38, "ink", -0.012), 50
+    fact, fact_leading = Type("text", 21, "ink"), 29
+    facts_gap, label_to_fact, bottom = 76, 34, 20
     lines = c.wrap_balanced(CONFIG["about"], lead, W - COL)
     y = c.first_baseline(lead)
     for i, line in enumerate(lines):
-        body.append(c.text(line, COL, y + i * lh, lead, optical=True))
-    y += (len(lines) - 1) * lh + 76
+        body.append(c.text(line, COL, y + i * leading, lead, optical=True))
+    y += (len(lines) - 1) * leading + facts_gap
     facts = CONFIG["facts"]
-    fact = Type("text", 21, "ink")
     measure = (W - COL) / len(facts) - 40
     for (label, value), x in zip(facts, c.columns(len(facts)), strict=True):
         body.append(c.text(label, x, y, LABEL))
         for k, line in enumerate(c.wrap(value, fact, measure)):
-            body.append(c.text(line, x, y + 34 + k * 29, fact))
-    return c.render(int(y + 34 + 29 * 2 + 20), "".join(body), alt)
+            body.append(c.text(line, x, y + label_to_fact + k * fact_leading, fact))
+    # the height leaves room for two lines per fact; a fact that wraps to three would be cut off
+    return c.render(int(y + label_to_fact + fact_leading * 2 + bottom), "".join(body), alt)
 
 
 def build_stack(F: Fonts, t: Theme, alt: str) -> str:
@@ -636,32 +637,31 @@ def build_stack(F: Fonts, t: Theme, alt: str) -> str:
     body = c.head("Stack")
     groups = CONFIG["stack"]
     cols = 3
-    lh = 34
-    tool = Type("text", 24, "ink", -0.01)
+    tool, leading = Type("text", 24, "ink", -0.01), 34
+    label_to_tool, row_pad, row_gap = 40, 30, 46
     row_h = []
     for r in range(0, len(groups), cols):
         tallest = max(len(items) for _, items in groups[r : r + cols])
-        row_h.append(30 + tallest * lh + 46)
+        row_h.append(row_pad + tallest * leading + row_gap)
     y = LABEL_BASELINE
     for r, start in enumerate(range(0, len(groups), cols)):
         for (label, items), x in zip(groups[start : start + cols], c.columns(cols), strict=False):
             body.append(c.text(label, x, y, LABEL))
             for k, item in enumerate(items):
-                body.append(c.text(item, x, y + 40 + k * lh, tool))
+                body.append(c.text(item, x, y + label_to_tool + k * leading, tool))
         y += row_h[r]
-    return c.render(int(y - 30), "".join(body), alt)
+    return c.render(int(y - row_pad), "".join(body), alt)
 
 
 def build_contact(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas(F, t)
     body = c.head("Contact")
-    size = 58
-    line_type = Type("display", size, "ink", -0.03)
-    lines = c.wrap_balanced(CONFIG["contact_line"], line_type, W - COL)
-    y = c.first_baseline(line_type)
+    display, leading, bottom = Type("display", 58, "ink", -0.03), 70, 56
+    lines = c.wrap_balanced(CONFIG["contact_line"], display, W - COL)
+    y = c.first_baseline(display)
     for i, line in enumerate(lines):
-        body.append(c.text(line, COL, y + i * 70, line_type, optical=True))
-    return c.render(int(y + (len(lines) - 1) * 70 + 56), "".join(body), alt)
+        body.append(c.text(line, COL, y + i * leading, display, optical=True))
+    return c.render(int(y + (len(lines) - 1) * leading + bottom), "".join(body), alt)
 
 
 def build_link_row(F: Fonts, t: Theme, alt: str, label: str, value: str, last: bool = False) -> str:
@@ -683,7 +683,7 @@ def build_work_row(F: Fonts, t: Theme, alt: str, repo: Repo, head: bool = False,
     body = c.head("Selected work") if head else [c.rule(span="content")]
     note, description = Type("mono", 15, "muted"), Type("text", 18, "muted")
     body.append(c.text(repo["name"], COL, 56, Type("display", 34, "ink", -0.02), optical=True))
-    desc = c.fit(repo["description"] or "No description yet", description, 620)
+    desc = c.fit(repo["description"] or "No description yet", description, width=620)
     body.append(c.text(desc, COL, 90, description))
     if language := repo["language"]:
         body.append(c.text(language, W, 52, note, anchor="end"))
