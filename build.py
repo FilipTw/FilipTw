@@ -90,9 +90,16 @@ CONFIG: Config = {
     "work_limit": 4,
 }
 
+
 # ════════════════════════════════════════════════════════════════════════════
 #  Design tokens
 # ════════════════════════════════════════════════════════════════════════════
+def mix(a: str, b: str, t: float) -> str:
+    ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(ca, cb, strict=True))
+
+
 Role = Literal["page", "ink", "muted", "faint", "line", "contour", "accent", "cell"]
 
 
@@ -111,6 +118,20 @@ class Theme:
 
     def colour(self, role: Role) -> str:
         return str(getattr(self, role))
+
+    @property
+    def calendar_ramp(self) -> list[str]:
+        """One colour per contribution level, 0 (none) to 4."""
+        return [self.cell] + [mix(self.cell, self.accent, a) for a in (0.4, 0.62, 0.82, 1.0)]
+
+    @property
+    def language_shades(self) -> list[str]:
+        """The language bars, most used first."""
+        return [self.accent] + [mix(self.page, self.accent, a) for a in (0.66, 0.44, 0.28, 0.16, 0.08)]
+
+    def contour_stroke(self, tint: float) -> str:
+        """A hero contour line; tint 0 to 1 draws it toward the accent near the minimum."""
+        return mix(self.contour, self.accent, 0.12 + 0.88 * tint) if tint > 0 else self.contour
 
 
 THEMES: dict[str, Theme] = {
@@ -320,12 +341,6 @@ class Canvas:
         )
 
 
-def mix(a: str, b: str, t: float) -> str:
-    ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
-    cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
-    return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(ca, cb, strict=True))
-
-
 def fonts() -> Fonts:
     load = partial(fontstore.load, cache_dir=FONT_DIR)
     mona = load("mona-sans-latin-wdth-normal.woff2")
@@ -456,11 +471,7 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     for k, line, hit in lines:
         depth = 1 - k / k_inner
         tint = min(max((depth - 0.42) / 0.58, 0), 1) ** 1.3 if hit else 0
-        if tint > 0:
-            stroke = mix(t.contour, t.accent, 0.12 + 0.88 * tint)
-            width = 1.1 + 0.4 * tint
-        else:
-            stroke, width = t.contour, 1.1
+        stroke, width = t.contour_stroke(tint), 1.1 + 0.4 * tint
         paths.append(
             f'<path class="ct" pathLength="1" style="animation-delay:{0.05 + k * 0.032:.3f}s" '
             f'd="{poly_d(line)}" stroke="{stroke}" stroke-width="{width:.2f}"/>'
@@ -742,7 +753,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         weeks[-1].append((d, count, level))
     pitch = W / max(len(weeks), 53)
     cell = pitch * 0.82
-    ramp = [t.cell] + [mix(t.cell, t.accent, a) for a in (0.4, 0.62, 0.82, 1.0)]
+    ramp = t.calendar_ramp
     cols, months, last_month = [], [], None
     for wi, week in enumerate(weeks):
         x = wi * pitch
@@ -785,7 +796,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         if rest / total > 0.01:
             top.append(("Other", rest))
         total = sum(v for _, v in top)
-        shades = [t.accent] + [mix(t.page, t.accent, a) for a in (0.66, 0.44, 0.28, 0.16, 0.08)]
+        shades = t.language_shades
         body.append(c.text("Most used languages", COL, y - 18, legend))
         x = COL
         gap = 4
