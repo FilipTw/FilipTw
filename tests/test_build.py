@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import build
+from activity import Activity
 
 HERE = Path(__file__).resolve().parent
 GOLDEN = HERE / "golden"
@@ -15,10 +16,13 @@ TODAY = dt.date(2026, 6, 15)
 BRANCH = "main"
 
 
+def fixture_activity():
+    return Activity(**json.loads((HERE / "fixtures" / "activity.json").read_text()))
+
+
 @pytest.fixture(scope="module")
 def files():
-    activity = json.loads((HERE / "fixtures" / "activity.json").read_text())
-    return build.build_profile(activity, TODAY, build.fonts(), BRANCH)
+    return build.build_profile(fixture_activity(), TODAY, build.fonts(), BRANCH)
 
 
 def read_tree(root):
@@ -57,7 +61,7 @@ def test_readme_alt_text_matches_each_svg_title(files):
 
 def test_main_keeps_the_previous_artwork_when_ci_gets_incomplete_activity(monkeypatch, tmp_path):
     monkeypatch.setattr(build, "ROOT", tmp_path)
-    monkeypatch.setattr(build, "fetch_activity", lambda *args, **kwargs: {"repos": 3})
+    monkeypatch.setattr(build, "fetch_activity", lambda *args, **kwargs: Activity(repos=3))
     monkeypatch.setenv("CI", "true")
     with pytest.raises(SystemExit):
         build.main()
@@ -65,7 +69,7 @@ def test_main_keeps_the_previous_artwork_when_ci_gets_incomplete_activity(monkey
 
 
 def test_main_links_the_readme_to_head_outside_github_actions(monkeypatch, tmp_path):
-    activity = json.loads((HERE / "fixtures" / "activity.json").read_text())
+    activity = fixture_activity()
     monkeypatch.setattr(build, "ROOT", tmp_path)
     monkeypatch.setattr(build, "fetch_activity", lambda *args, **kwargs: activity)
     monkeypatch.delenv("CI", raising=False)

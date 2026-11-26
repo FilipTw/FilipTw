@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from activity import fetch_activity
+from activity import Activity, fetch_activity
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "github"
 USER = "FilipTw"
@@ -69,22 +69,22 @@ def fetch(token, transport):
 
 
 def test_with_a_token_graphql_supplies_the_numbers_and_the_public_calendar_the_days():
-    assert fetch("token", fake_github()) == {**FROM_GRAPHQL, **FROM_CALENDAR}
+    assert fetch("token", fake_github()) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})
 
 
 @pytest.mark.parametrize("graphql", [offline, '{"errors": [{"message": "rate limited"}]}'],
                          ids=["network", "graphql-error"])
 def test_when_graphql_fails_the_rest_api_supplies_the_numbers(graphql):
-    assert fetch("token", fake_github(graphql=graphql)) == {**FROM_REST, **FROM_CALENDAR}
+    assert fetch("token", fake_github(graphql=graphql)) == Activity(**{**FROM_REST, **FROM_CALENDAR})
 
 
 def test_without_a_token_the_rest_api_supplies_the_numbers():
-    assert fetch(None, fake_github()) == {**FROM_REST, **FROM_CALENDAR}
+    assert fetch(None, fake_github()) == Activity(**{**FROM_REST, **FROM_CALENDAR})
 
 
 def test_when_the_rest_api_fails_too_only_the_calendar_is_known():
-    assert fetch(None, fake_github(rest=offline)) == FROM_CALENDAR
+    assert fetch(None, fake_github(rest=offline)) == Activity(**FROM_CALENDAR)
 
 
 def test_when_the_calendar_fails_the_graphql_days_stay():
-    assert fetch("token", fake_github(calendar=offline)) == FROM_GRAPHQL
+    assert fetch("token", fake_github(calendar=offline)) == Activity(**FROM_GRAPHQL)

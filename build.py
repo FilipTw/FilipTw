@@ -588,10 +588,10 @@ def build_activity(F, t, alt, activity, today):
     body = section_head(c, F, t, "Activity")
 
     # metrics
-    metrics = [("Contributions this year", activity.get("contributions")),
-               ("Public repositories", activity.get("repos")),
-               ("Stars earned", activity.get("stars")),
-               ("Followers", activity.get("followers"))]
+    metrics = [("Contributions this year", activity.contributions),
+               ("Public repositories", activity.repos),
+               ("Stars earned", activity.stars),
+               ("Followers", activity.followers)]
     colw = (W - COL) / 4
     num_base = 46 - 0.729 * 17 + 0.729 * 60
     for j, (label, value) in enumerate(metrics):
@@ -600,7 +600,7 @@ def build_activity(F, t, alt, activity, today):
         body.append(c.text(F["text"], label, x, num_base + 36, 16, t["muted"]))
 
     # contribution calendar: full width, like the hero, so the cells stay legible
-    days = activity.get("days", [])[-371:]
+    days = (activity.days or [])[-371:]
     y_cal = num_base + 112
     weeks = []
     for date, count, level in days:
@@ -637,7 +637,7 @@ def build_activity(F, t, alt, activity, today):
     body.append(c.text(F["text"], f"Updated {today.day} {today:%B %Y}", 0, y_leg, 14, t["muted"]))
 
     # languages
-    langs = sorted(activity.get("languages", {}).items(), key=lambda kv: -kv[1])
+    langs = sorted((activity.languages or {}).items(), key=lambda kv: -kv[1])
     y = y_leg + 24
     if langs:
         y = y_leg + 78
@@ -703,7 +703,7 @@ def work_alt(repo):
 
 def sections(activity, today):
     """Every Section of the profile, in README order."""
-    work = activity.get("work", [])
+    work = activity.work or []
     links = CONFIG["links"]
     return [
         Section("hero", f'{CONFIG["name"]}, {CONFIG["role"]}. {CONFIG["tagline"]}', build_hero, gap=Gap.SECTION),
@@ -714,7 +714,7 @@ def sections(activity, today):
                             partial(build_work_row, repo=repo, head=i == 0, last=i == len(work) - 1),
                             link=repo["url"])
                     for i, repo in enumerate(work)]),
-        Section("activity", f'Activity. {fmt_count(activity.get("contributions"))} contributions in the last year.',
+        Section("activity", f'Activity. {fmt_count(activity.contributions)} contributions in the last year.',
                 partial(build_activity, activity=activity, today=today), gap=Gap.SECTION),
         Section("contact", CONFIG["contact_line"], build_contact, gap=Gap.END),
         *row_group([Section(f"link-{label.lower()}", f"{label}: {value}",
@@ -774,7 +774,7 @@ def main():
     print("  fetching activity")
     activity = fetch_activity(CONFIG["username"], os.environ.get("GITHUB_TOKEN"), http,
                               work_limit=CONFIG["work_limit"])
-    if os.environ.get("CI") and not ("days" in activity and "repos" in activity):
+    if os.environ.get("CI") and not activity.complete:
         raise SystemExit("  incomplete data from GitHub; keeping the previous artwork")
     branch = os.environ.get("GITHUB_REF_NAME") or "HEAD"
     write_profile(build_profile(activity, dt.date.today(), F, branch), ROOT)

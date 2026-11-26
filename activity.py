@@ -2,6 +2,26 @@
 import json
 import re
 import urllib.request
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass(frozen=True)
+class Activity:
+    """What GitHub reported. A number no source supplied is None, and the profile shows a dash."""
+    contributions: Optional[int] = None
+    days: Optional[list] = None        # [(ISO date, contributions, level 0-4)], oldest first
+    repos: Optional[int] = None
+    stars: Optional[int] = None
+    followers: Optional[int] = None
+    languages: Optional[dict] = None   # {language: weight}
+    work: Optional[list] = None        # [{name, description, url, stars, language}]
+
+    @property
+    def complete(self):
+        """Enough to redraw the profile: the calendar and the repository numbers both arrived."""
+        return self.days is not None and self.repos is not None
+
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 REPO_FIELDS = "name description url stargazerCount primaryLanguage{name}"
@@ -108,4 +128,4 @@ def fetch_activity(user, token, transport, *, work_limit):
         activity.update(fetch_calendar(user, transport))
     except Exception as exc:
         print(f"  public calendar unavailable ({exc})")
-    return activity
+    return Activity(**activity)
