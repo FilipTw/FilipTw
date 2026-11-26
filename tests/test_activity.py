@@ -169,3 +169,8 @@ def test_calendar_counts_survive_whitespace_inside_the_tool_tips():
     padded = re.sub(r"(<tool-tip[^>]*>)([^<]*)</tool-tip>", r"\1\n  \2\n</tool-tip>", page)
     assert padded != page
     assert fetch("token", fake_github(calendar=padded)) == with_calendar(FROM_GRAPHQL)
+
+
+def test_a_calendar_page_without_day_cells_does_not_replace_the_graphql_days():
+    """GitHub changing the page's markup must not blank the calendar on the profile."""
+    assert fetch("token", fake_github(calendar="<html><body>Sign in to GitHub</body></html>")) == FROM_GRAPHQL
