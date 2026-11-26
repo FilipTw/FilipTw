@@ -6,20 +6,19 @@ import re
 import urllib.request
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from typing import Optional
 
 
 @dataclass(frozen=True)
 class Activity:
     """What GitHub reported. A number no source supplied is None, and the profile shows a dash."""
 
-    contributions: Optional[int] = None
-    days: Optional[list] = None  # [(ISO date, contributions, level 0-4)], oldest first
-    repos: Optional[int] = None
-    stars: Optional[int] = None
-    followers: Optional[int] = None
-    languages: Optional[dict] = None  # {language: weight}; only the shares are drawn, see below
-    work: Optional[list] = None  # [{name, description, url, stars, language}]
+    contributions: int | None = None
+    days: list | None = None  # [(ISO date, contributions, level 0-4)], oldest first
+    repos: int | None = None
+    stars: int | None = None
+    followers: int | None = None
+    languages: dict | None = None  # {language: weight}; only the shares are drawn, see below
+    work: list | None = None  # [{name, description, url, stars, language}]
 
     @property
     def complete(self):
@@ -44,7 +43,7 @@ QUERY = """query($login:String!){user(login:$login){
                orderBy:{field:STARGAZERS,direction:DESC}){
     totalCount nodes{%s languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name}}}}}
   contributionsCollection{contributionCalendar{totalContributions
-    weeks{contributionDays{date contributionCount contributionLevel}}}}}}""" % (REPO_FIELDS, REPO_FIELDS)
+    weeks{contributionDays{date contributionCount contributionLevel}}}}}}""" % (REPO_FIELDS, REPO_FIELDS)  # noqa: UP031 (GraphQL braces make an f-string unreadable)
 
 
 def http(url, token=None, payload=None, accept="application/json"):

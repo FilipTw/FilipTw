@@ -21,11 +21,11 @@ import io
 import os
 import tarfile
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
-from typing import Callable, Optional
 
 import contourpy
 import numpy as np
@@ -154,7 +154,7 @@ class Font:
         hb.shape(self.hb, buf, {"kern": True, "liga": True})
         return [
             (self.order[i.codepoint], p.x_advance, p.x_offset, p.y_offset)
-            for i, p in zip(buf.glyph_infos, buf.glyph_positions)
+            for i, p in zip(buf.glyph_infos, buf.glyph_positions, strict=True)
         ]
 
     def outline(self, glyph):
@@ -250,7 +250,7 @@ class Canvas:
 def mix(a, b, t):
     ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
     cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
-    return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(ca, cb))
+    return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(ca, cb, strict=True))
 
 
 def fonts():
@@ -341,7 +341,7 @@ def simplify(pts, eps):
 def inside(poly, pt):
     x, y = pt
     hit = False
-    for (x1, y1), (x2, y2) in zip(poly, np.roll(poly, -1, axis=0)):
+    for (x1, y1), (x2, y2) in zip(poly, np.roll(poly, -1, axis=0), strict=True):
         if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
             hit = not hit
     return hit
@@ -414,11 +414,11 @@ def build_hero(F, t, alt):
     # max(): the last offset is 1 - 1.0000000000000002 on some platforms, which would print as -0.0000
     trail_kf = "".join(
         f"{(ti - t0) / dur * 100:.2f}%{{stroke-dashoffset:{max(1 - ci, 0.0):.4f}}}"
-        for ti, ci in zip(ctimes, cum)
+        for ti, ci in zip(ctimes, cum, strict=True)
     )
     move_kf = "".join(
         f"{(ti - t0) / dur * 100:.2f}%{{transform:translate({x:.1f}px,{y:.1f}px)}}"
-        for ti, (x, y) in zip(ctimes, curve)
+        for ti, (x, y) in zip(ctimes, curve, strict=True)
     )
     c.css.append(
         f".trail{{stroke-dasharray:1 1;animation:trail {dur}s linear {t0}s both}}"
@@ -757,7 +757,7 @@ def build_activity(F, t, alt, activity, today):
         x = COL
         gap = 4
         usable = W - COL - gap * (len(top) - 1)
-        for i, (name, v) in enumerate(top):
+        for i, (_, v) in enumerate(top):
             w = usable * v / total
             body.append(
                 f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 2):.1f}" height="10" rx="2" '
@@ -807,7 +807,7 @@ class Section:
     stem: str
     alt: str
     draw: Callable[[dict, dict, str], str]  # (fonts, Theme, alt) -> SVG
-    link: Optional[str] = None
+    link: str | None = None
     gap: Gap = Gap.NONE
 
 
@@ -883,7 +883,8 @@ def render_readme(svgs, branch):
     for s, by_theme in svgs:
         v = hashlib.sha1((by_theme["dark"] + by_theme["light"]).encode()).hexdigest()[:8]
         pic = (
-            f'<picture><source media="(prefers-color-scheme: dark)" srcset="{base}/{s.stem}-dark.svg?v={v}" />'
+            f'<picture><source media="(prefers-color-scheme: dark)" '
+            f'srcset="{base}/{s.stem}-dark.svg?v={v}" />'
             f'<img src="{base}/{s.stem}-light.svg?v={v}" width="100%" alt="{html.escape(s.alt)}" /></picture>'
         )
         if s.link:
