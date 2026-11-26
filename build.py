@@ -861,14 +861,16 @@ def build_profile(activity, today, F, branch):
 
 
 def write_profile(files, root):
-    """Write the built files under root, replacing every SVG previously in assets/."""
+    """Write the built files under root, then remove SVGs of Sections that no longer exist."""
     assets = root / ASSETS
     assets.mkdir(exist_ok=True)
-    for old in assets.glob("*.svg"):
-        old.unlink()
     for path, text in files.items():
         (root / path).write_text(text, encoding="utf-8")
         print(f"  {path:33s} {len(text.encode()) / 1024:6.1f} KB")
+    for old in assets.glob("*.svg"):
+        if f"{ASSETS}/{old.name}" not in files:
+            old.unlink()
+            print(f"  removed {ASSETS}/{old.name}")
 
 
 def main():
