@@ -35,7 +35,7 @@ from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import TTFont
 
 import fontstore
-from activity import Activity, Repo, fetch_activity, http
+from activity import Activity, Day, Repo, fetch_activity, http
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -359,6 +359,8 @@ def fonts() -> Fonts:
 Points = npt.NDArray[np.float64]  # an (n, 2) array of x, y
 HERO_H = 760
 TARGET = (845.0, 262.0)
+DESCENT_START, DESCENT_TIME = 1.25, 3.6  # seconds: when the marker sets off, how long it takes
+NAME_BASELINE = 636
 
 
 def loss(x: npt.ArrayLike, y: npt.ArrayLike) -> Points:
@@ -467,44 +469,39 @@ def poly_d(pts: Points) -> str:
     return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
 
 
-def build_hero(F: Fonts, t: Theme, alt: str) -> str:
-    c = Canvas(F, t)
-    H = HERO_H
-    lines, zmin = contour_lines()
-    pts = descent()
-    n = len(pts)
-    t0, dur = 1.25, 3.6  # descent start, duration (s)
-    times = [t0 + dur * i / (n - 1) for i in range(n)]
-    body = []
-
-    # ── contour field ──────────────────────────────────────────────────────
+def hero_contours(c: Canvas) -> str:
+    """Contour lines of the loss surface, drawn in; the rings round the minimum lean to the accent."""
+    lines, _ = contour_lines()
     k_inner = max(k for k, _, hit in lines if hit) + 1
     paths = []
     for k, line, hit in lines:
         depth = 1 - k / k_inner
         tint = min(max((depth - 0.42) / 0.58, 0), 1) ** 1.3 if hit else 0
-        stroke, width = t.contour_stroke(tint), 1.1 + 0.4 * tint
+        stroke, width = c.t.contour_stroke(tint), 1.1 + 0.4 * tint
         paths.append(
             f'<path class="ct" pathLength="1" style="animation-delay:{0.05 + k * 0.032:.3f}s" '
             f'd="{poly_d(line)}" stroke="{stroke}" stroke-width="{width:.2f}"/>'
         )
-    body.append(f'<g fill="none" mask="url(#fade)">{"".join(paths)}</g>')
     c.extra.append(
         f'<radialGradient id="rad" gradientUnits="userSpaceOnUse" cx="790" cy="300" r="820">'
         f'<stop offset=".45" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>'
-        f'<linearGradient id="vfade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="{H}">'
+        f'<linearGradient id="vfade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="{HERO_H}">'
         f'<stop offset="0" stop-opacity=".9"/><stop offset=".13" stop-opacity="0"/>'
         f'<stop offset=".5" stop-opacity="0"/><stop offset=".9" stop-opacity=".92"/></linearGradient>'
-        f'<mask id="fade" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
-        f'<rect width="{W}" height="{H}" fill="url(#rad)"/>'
-        f'<rect width="{W}" height="{H}" fill="url(#vfade)"/></mask>'
+        f'<mask id="fade" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{HERO_H}">'
+        f'<rect width="{W}" height="{HERO_H}" fill="url(#rad)"/>'
+        f'<rect width="{W}" height="{HERO_H}" fill="url(#vfade)"/></mask>'
     )
     c.css.append(
         ".ct{stroke-dasharray:1 1;animation:draw 2.2s cubic-bezier(.65,0,.35,1) both}"
         "@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}"
     )
+    return f'<g fill="none" mask="url(#fade)">{"".join(paths)}</g>'
 
-    # ── descent trail and marker ───────────────────────────────────────────
+
+def hero_descent(c: Canvas, pts: Points, times: list[float]) -> list[str]:
+    """The start ring, the trail with the marker riding along it, and their notes."""
+    t, t0, dur = c.t, DESCENT_START, DESCENT_TIME
     curve, ctimes = smooth(pts, times)
     seg = np.hypot(*np.diff(curve, axis=0).T)
     cum = np.concatenate([[0], np.cumsum(seg)]) / seg.sum()
@@ -522,43 +519,39 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
         f"@keyframes trail{{{trail_kf}}}"
         f".dot{{animation:move {dur}s linear {t0}s both}}@keyframes move{{{move_kf}}}"
     )
-    sx, sy = pts[0]
-    ex, ey = pts[-1]
-    body.append(
-        f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="4.5" fill="none" stroke="{t.muted}" '
-        f'stroke-width="1.4" class="fd" style="animation-delay:{t0 - 0.3}s"/>'
-    )
-    body.append(
-        f'<path class="trail" pathLength="1" d="{poly_d(curve)}" fill="none" stroke="{t.accent}" '
-        f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
-    )
-    body.append(
-        f'<g class="dot" transform="translate({ex:.1f} {ey:.1f})">'
-        f'<circle class="pulse" r="7" fill="none" stroke="{t.accent}" stroke-width="1.4"/>'
-        f'<circle r="13" fill="{t.accent}" opacity=".16"/>'
-        f'<circle r="6" fill="{t.accent}"/></g>'
-    )
     c.css.append(
         f".pulse{{transform-box:fill-box;transform-origin:center;"
         f"animation:pulse 2.8s cubic-bezier(.2,.6,.3,1) {t0 + dur:.2f}s infinite both}}"
         "@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(4.2);opacity:0}}"
     )
+    sx, sy = pts[0]
+    ex, ey = pts[-1]
     note = Type("mono", 14, "muted")
     start_delay = f"animation-delay:{t0 - 0.3}s"
     lx, ly = ex + 150, ey - 112
-    body.append(
+    return [
+        f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="4.5" fill="none" stroke="{t.muted}" '
+        f'stroke-width="1.4" class="fd" style="{start_delay}"/>',
+        f'<path class="trail" pathLength="1" d="{poly_d(curve)}" fill="none" stroke="{t.accent}" '
+        f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+        f'<g class="dot" transform="translate({ex:.1f} {ey:.1f})">'
+        f'<circle class="pulse" r="7" fill="none" stroke="{t.accent}" stroke-width="1.4"/>'
+        f'<circle r="13" fill="{t.accent}" opacity=".16"/>'
+        f'<circle r="6" fill="{t.accent}"/></g>',
         f'<g class="fd" style="animation-delay:{t0 + dur:.2f}s">'
         f'<path d="M{ex + 10:.1f} {ey - 10:.1f}L{lx - 40:.1f} {ly:.1f}H{lx - 8:.1f}" fill="none" '
-        f'stroke="{t.muted}" stroke-width="1"/>' + c.text("minimum", lx, ly + 5, note) + "</g>"
-    )
-    body.append(
-        c.text("init", sx, sy + 30, note, anchor="middle", attrs=f' class="fd" style="{start_delay}"')
-    )
+        f'stroke="{t.muted}" stroke-width="1"/>' + c.text("minimum", lx, ly + 5, note) + "</g>",
+        c.text("init", sx, sy + 30, note, anchor="middle", attrs=f' class="fd" style="{start_delay}"'),
+    ]
 
-    # ── top row: caption + live readout ────────────────────────────────────
+
+def hero_readout(c: Canvas, pts: Points, times: list[float]) -> str:
+    """The top row: the caption, and an epoch and loss readout that counts along with the marker."""
+    _, zmin = contour_lines()
+    n = len(pts)
     top_row = 38
     fade_in = ' class="fd" style="animation-delay:.2s"'
-    body.append(c.text(CONFIG["hero_caption"], 0, top_row, LABEL, attrs=fade_in))
+    caption = c.text(CONFIG["hero_caption"], 0, top_row, LABEL, attrs=fade_in)
     reading, reading_value = Type("mono", 16, "muted"), Type("mono", 16, "ink")
     adv = c.measure("0", reading)
     loss_scale = 2.4 / (loss(*pts[0]) - zmin)
@@ -586,17 +579,17 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
             end = times[frames[j + 1]]
             style = f"animation:on {end - start:.3f}s step-end {start:.3f}s"
             readout.append(f'<g class="fr" style="{style}">{group}</g>')
-    body.append(f'<g class="fd" style="animation-delay:.2s">{"".join(readout)}</g>')
     c.css.append(
         ".fr{opacity:0}.fr.last{opacity:1}@keyframes on{0%,100%{opacity:1}}@keyframes off{0%,100%{opacity:0}}"
     )
+    return caption + f"<g{fade_in}>{''.join(readout)}</g>"
 
-    # ── name, letter by letter ─────────────────────────────────────────────
-    name = CONFIG["name"]
-    track = -0.03
+
+def hero_name(c: Canvas) -> str:
+    """The name across the left, its letters rising into place one by one."""
+    name, track, base = CONFIG["name"], -0.03, NAME_BASELINE
     size = 680 / c.measure(name, Type("display", 1000, "ink", track)) * 1000
-    base = 636
-    cap = F["display"].cap_height * size
+    cap = c.F["display"].cap_height * size
     letters = c.glyphs(name, 0, base, Type("display", size, "ink", track), optical=True)
     els = "".join(
         f'<g class="ch" style="animation-delay:{0.35 + i * 0.075:.3f}s">{c.use(*g)}</g>'
@@ -607,27 +600,42 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
         f'<clipPath id="nm"><rect x="-20" y="{top:.0f}" width="{W + 40}" '
         f'height="{bottom - top:.0f}"/></clipPath>'
     )
-    body.append(f'<g clip-path="url(#nm)" fill="{t.ink}">{els}</g>')
     c.css.append(
         ".ch{animation:rise 1.4s cubic-bezier(.19,1,.22,1) both}"
         f"@keyframes rise{{from{{transform:translateY({bottom - top:.0f}px)}}to{{transform:none}}}}"
     )
+    return f'<g clip-path="url(#nm)" fill="{c.t.ink}">{els}</g>'
 
-    # ── role + tagline, bottom right ───────────────────────────────────────
+
+def hero_byline(c: Canvas) -> str:
+    """The role over the tagline, bottom right; the tagline's last line sits on the name's baseline."""
     bx, bw = 812, W - 812
     tagline = Type("text", 19, "muted")
     tag = c.wrap(CONFIG["tagline"], tagline, bw)
-    y_last = base
-    block = [c.text(line, bx, y_last - (len(tag) - 1 - i) * 27, tagline) for i, line in enumerate(tag)]
-    block.append(c.text(CONFIG["role"], bx, y_last - (len(tag) - 1) * 27 - 40, Type("medium", 23, "ink")))
-    body.append(f'<g class="fd" style="animation-delay:.95s">{"".join(block)}</g>')
+    first = NAME_BASELINE - (len(tag) - 1) * 27
+    block = [c.text(line, bx, first + i * 27, tagline) for i, line in enumerate(tag)]
+    block.append(c.text(CONFIG["role"], bx, first - 40, Type("medium", 23, "ink")))
+    return f'<g class="fd" style="animation-delay:.95s">{"".join(block)}</g>'
 
+
+def build_hero(F: Fonts, t: Theme, alt: str) -> str:
+    c = Canvas(F, t)
+    pts = descent()
+    n = len(pts)
+    times = [DESCENT_START + DESCENT_TIME * i / (n - 1) for i in range(n)]
+    body = [
+        hero_contours(c),
+        *hero_descent(c, pts, times),
+        hero_readout(c, pts, times),
+        hero_name(c),
+        hero_byline(c),
+    ]
     c.css.append(
         ".fd{animation:fd 1.3s cubic-bezier(.19,1,.22,1) both}"
         "@keyframes fd{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}"
         "@media (prefers-reduced-motion:reduce){.ct,.trail,.dot,.pulse,.ch,.fd,.fr{animation:none!important}}"
     )
-    return c.render(H, "".join(body), alt)
+    return c.render(HERO_H, "".join(body), alt)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -661,17 +669,15 @@ def build_stack(F: Fonts, t: Theme, alt: str) -> str:
     cols = 3
     tool, leading = Type("text", 24, "ink", -0.01), 34
     label_to_tool, row_pad, row_gap = 40, 30, 46
-    row_h = []
-    for r in range(0, len(groups), cols):
-        tallest = max(len(items) for _, items in groups[r : r + cols])
-        row_h.append(row_pad + tallest * leading + row_gap)
     y = LABEL_BASELINE
-    for r, start in enumerate(range(0, len(groups), cols)):
-        for (label, items), x in zip(groups[start : start + cols], c.columns(cols), strict=False):
+    for start in range(0, len(groups), cols):
+        row = groups[start : start + cols]
+        for (label, items), x in zip(row, c.columns(cols), strict=False):
             body.append(c.text(label, x, y, LABEL))
             for k, item in enumerate(items):
                 body.append(c.text(item, x, y + label_to_tool + k * leading, tool))
-        y += row_h[r]
+        tallest = max(len(items) for _, items in row)
+        y += row_pad + tallest * leading + row_gap
     return c.render(int(y - row_pad), "".join(body), alt)
 
 
@@ -735,37 +741,26 @@ def build_colophon(F: Fonts, t: Theme, alt: str, today: dt.date) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 def fmt_count(v: int | None) -> str:
     """A metric as the profile shows it: 1,234, or a dash when GitHub did not report it."""
-    return f"{v:,}" if isinstance(v, int) else "\u2013"
+    return f"{v:,}" if isinstance(v, int) else "–"
 
 
-def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.date) -> str:
-    c = Canvas(F, t)
-    body = c.head("Activity")
+LEGEND = Type("text", 14, "muted")  # the calendar's legend row and the languages' Label
 
-    metrics = [
-        ("Contributions this year", activity.contributions),
-        ("Public repositories", activity.repos),
-        ("Stars earned", activity.stars),
-        ("Followers", activity.followers),
-    ]
-    figure = Type("display", 60, "ink", -0.03)
-    num_base = c.first_baseline(figure)
-    for (label, value), x in zip(metrics, c.columns(len(metrics)), strict=True):
-        body.append(c.text(fmt_count(value), x, num_base, figure, optical=True))
-        body.append(c.text(label, x, num_base + 36, NOTE))
 
-    # contribution calendar: full width, like the hero, so the cells stay legible
-    days = (activity.days or [])[-371:]
-    y_cal = num_base + 112
+def contribution_calendar(
+    c: Canvas, days: list[Day], y_cal: float, today: dt.date
+) -> tuple[list[str], float]:
+    """One column of cells per week, full width like the hero so the cells stay legible, the months above
+    and the legend row below. Returns the drawing and the legend's baseline."""
     weeks: list[list[tuple[dt.date, int, int]]] = []
-    for date, count, level in days:
+    for date, count, level in days[-371:]:
         d = dt.date.fromisoformat(date)
         if not weeks or d.isoweekday() % 7 == 0:
             weeks.append([])
         weeks[-1].append((d, count, level))
     pitch = W / max(len(weeks), 53)
     cell = pitch * 0.82
-    ramp = t.calendar_ramp
+    ramp = c.t.calendar_ramp
     cols, months, last_month = [], [], None
     for wi, week in enumerate(weeks):
         x = wi * pitch
@@ -779,7 +774,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         if first.month != last_month and first.day <= 7 and wi < len(weeks) - 2:
             months.append(c.text(first.strftime("%b"), x, y_cal + 14, Type("text", 15, "muted")))
             last_month = first.month
-    body += months + cols
+    body = months + cols
     c.css.append(
         ".wk{animation:wk 1s cubic-bezier(.19,1,.22,1) both}"
         "@keyframes wk{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}"
@@ -787,55 +782,78 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
     )
     y_leg = y_cal + 30 + 7 * pitch + 30
     key = 13
-    legend = Type("text", 14, "muted")
-    lx = W - 5 * (key + 4) - c.measure("More", legend) - 10
-    body.append(c.text("Less", lx - 10, y_leg, legend, anchor="end"))
+    lx = W - 5 * (key + 4) - c.measure("More", LEGEND) - 10
+    body.append(c.text("Less", lx - 10, y_leg, LEGEND, anchor="end"))
     for i, col in enumerate(ramp):
         body.append(
             f'<rect x="{lx + i * (key + 4):.1f}" y="{y_leg - key + 1:.1f}" width="{key}" '
             f'height="{key}" rx="2.5" fill="{col}"/>'
         )
-    body.append(c.text("More", W, y_leg, legend, anchor="end"))
-    body.append(c.text(f"Updated {today.day} {today:%B %Y}", 0, y_leg, legend))
+    body.append(c.text("More", W, y_leg, LEGEND, anchor="end"))
+    body.append(c.text(f"Updated {today.day} {today:%B %Y}", 0, y_leg, LEGEND))
+    return body, y_leg
 
-    langs = sorted((activity.languages or {}).items(), key=lambda kv: -kv[1])
-    y = y_leg + 24
-    if langs:
-        y = y_leg + 78
-        total = sum(v for _, v in langs)
-        top = langs[:5]
-        rest = total - sum(v for _, v in top)
-        if rest / total > 0.01:
-            top.append(("Other", rest))
-        total = sum(v for _, v in top)
-        shades = t.language_shades
-        body.append(c.text("Most used languages", COL, y - 18, legend))
-        x = COL
-        gap = 4
-        usable = W - COL - gap * (len(top) - 1)
-        for i, (_, v) in enumerate(top):
-            w = usable * v / total
-            body.append(
-                f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 2):.1f}" height="10" rx="2" '
-                f'fill="{shades[i]}"/>'
-            )
-            x += w + gap
-        lx, ly = COL, y + 48
-        language, share = Type("text", 17, "ink"), Type("text", 17, "muted")
-        for i, (name, v) in enumerate(top):
-            percent = f"{100 * v / total:.0f}%"
-            label = f"{name} {percent}"
-            wlab = c.measure(label, language) + 20 + 32
-            if lx + wlab > W:
-                lx, ly = COL, ly + 32
-            body.append(
-                f'<rect x="{lx:.1f}" y="{ly - 11:.1f}" width="11" height="11" rx="2" fill="{shades[i]}"/>'
-            )
-            body.append(c.text(name, lx + 20, ly, language))
-            body.append(c.text(percent, lx + 26 + c.measure(name, language), ly, share))
-            lx += wlab
-        y = ly + 24
-    return c.render(int(y), "".join(body), alt)
+
+def language_bars(c: Canvas, languages: dict[str, int], y_leg: float) -> tuple[list[str], float]:
+    """The five most used languages and the rest as Other, as one bar and a key. Returns the drawing and
+    the y where the Section ends."""
+    langs = sorted(languages.items(), key=lambda kv: -kv[1])
+    if not langs:
+        return [], y_leg + 24
+    body = []
+    y = y_leg + 78
+    total = sum(v for _, v in langs)
+    top = langs[:5]
+    rest = total - sum(v for _, v in top)
+    if rest / total > 0.01:
+        top.append(("Other", rest))
+    total = sum(v for _, v in top)
+    shades = c.t.language_shades
+    body.append(c.text("Most used languages", COL, y - 18, LEGEND))
+    x: float = COL
+    gap = 4
+    usable = W - COL - gap * (len(top) - 1)
+    for i, (_, v) in enumerate(top):
+        w = usable * v / total
+        body.append(
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 2):.1f}" height="10" rx="2" fill="{shades[i]}"/>'
+        )
+        x += w + gap
+    lx: float = COL
+    ly = y + 48
+    language, share = Type("text", 17, "ink"), Type("text", 17, "muted")
+    for i, (name, v) in enumerate(top):
+        percent = f"{100 * v / total:.0f}%"
+        label = f"{name} {percent}"
+        wlab = c.measure(label, language) + 20 + 32
+        if lx + wlab > W:
+            lx, ly = COL, ly + 32
+        body.append(
+            f'<rect x="{lx:.1f}" y="{ly - 11:.1f}" width="11" height="11" rx="2" fill="{shades[i]}"/>'
+        )
+        body.append(c.text(name, lx + 20, ly, language))
+        body.append(c.text(percent, lx + 26 + c.measure(name, language), ly, share))
+        lx += wlab
+    return body, ly + 24
+
+
+def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.date) -> str:
+    c = Canvas(F, t)
+    body = c.head("Activity")
+    metrics = [
+        ("Contributions this year", activity.contributions),
+        ("Public repositories", activity.repos),
+        ("Stars earned", activity.stars),
+        ("Followers", activity.followers),
+    ]
+    figure = Type("display", 60, "ink", -0.03)
+    num_base = c.first_baseline(figure)
+    for (label, value), x in zip(metrics, c.columns(len(metrics)), strict=True):
+        body.append(c.text(fmt_count(value), x, num_base, figure, optical=True))
+        body.append(c.text(label, x, num_base + 36, NOTE))
+    calendar, y_leg = contribution_calendar(c, activity.days or [], num_base + 112, today)
+    languages, y = language_bars(c, activity.languages or {}, y_leg)
+    return c.render(int(y), "".join(body + calendar + languages), alt)
 
 
 # ════════════════════════════════════════════════════════════════════════════
