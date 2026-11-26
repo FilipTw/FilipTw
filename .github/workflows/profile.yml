@@ -42,8 +42,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .fonts
-          key: fonts-${{ hashFiles('build.py') }}
-          restore-keys: fonts-
+          key: fonts-${{ hashFiles('fontstore.py') }}
 
       - name: Check # lint, types and tests; a failure stops the daily artwork commit
         run: make check PY=python
