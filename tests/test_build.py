@@ -23,7 +23,7 @@ def files():
 
 def read_tree(root):
     return {p.relative_to(root).as_posix(): p.read_text(encoding="utf-8")
-            for p in sorted(root.rglob("*")) if p.is_file()}
+            for p in sorted(root.rglob("*")) if p.is_file() and not p.name.startswith(".")}  # skip .DS_Store
 
 
 def test_profile_matches_golden(files, request):
