@@ -92,7 +92,8 @@ def offline(url):
 
 
 def fake_github(**override):
-    """A transport that answers like GitHub. override maps a URL to its text, or to a callable that raises."""
+    """A transport that answers like GitHub from the fixtures. Each override (graphql, calendar, rest_repos)
+    replaces one answer with other text, or with a callable that raises."""
     answers = {
         GRAPHQL: (FIXTURES / "graphql.json").read_text(),
         CALENDAR: (FIXTURES / "contributions.html").read_text(),

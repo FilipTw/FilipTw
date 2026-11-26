@@ -28,7 +28,7 @@ class Activity:
     repos: int | None = None
     stars: int | None = None
     followers: int | None = None
-    languages: dict[str, int] | None = None  # {language: weight}; only the shares are drawn, see below
+    languages: dict[str, int] | None = None  # {language: weight}; GraphQL and REST weigh differently
     work: list[Repo] | None = None
 
     @property
@@ -38,6 +38,8 @@ class Activity:
 
 
 class Transport(Protocol):
+    """Fetches a URL and returns the response text: `http` in production, a fake in tests."""
+
     def __call__(
         self, url: str, token: str | None = None, payload: dict | None = None, accept: str = ...
     ) -> str: ...
@@ -201,7 +203,6 @@ def fetch_activity(user: str, token: str | None, transport: Transport, *, work_l
     then the public calendar, whose days and total replace GraphQL's because they match the profile page;
     if the calendar fails, GraphQL's days and total stay.
 
-    transport(url, token=None, payload=None, accept=...) -> response text; `http` in production.
     work_limit caps the selected work, which never includes the profile repository itself."""
     fields: dict[str, Any] = {}
     if token:

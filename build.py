@@ -706,7 +706,6 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
     c = Canvas()
     body = section_head(c, F, t, "Activity")
 
-    # metrics
     metrics = [
         ("Contributions this year", activity.contributions),
         ("Public repositories", activity.repos),
@@ -763,7 +762,6 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
     body.append(c.text(F["text"], "More", W, y_leg, 14, t["muted"], anchor="end"))
     body.append(c.text(F["text"], f"Updated {today.day} {today:%B %Y}", 0, y_leg, 14, t["muted"]))
 
-    # languages
     langs = sorted((activity.languages or {}).items(), key=lambda kv: -kv[1])
     y = y_leg + 24
     if langs:
