@@ -163,6 +163,7 @@ class Font:
         if self.location:
             self.hb.set_variations(self.location)
         self.upem = self.tt["head"].unitsPerEm
+        self.cap_height = self.tt["OS/2"].sCapHeight / self.upem
         self.glyphs = self.tt.getGlyphSet(location=self.location or None)
         self.order = self.tt.getGlyphOrder()
 
@@ -538,7 +539,7 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     track = -0.03
     size = 680 / c.measure(F["display"], name, 1000, track) * 1000
     base = 636
-    cap = 0.729 * size
+    cap = F["display"].cap_height * size
     letters = c.glyphs(F["display"], name, 0, base, size, track, optical=True)
     els = "".join(
         f'<g class="ch" style="animation-delay:{0.35 + i * 0.075:.3f}s">{c.use(*g)}</g>'
@@ -592,7 +593,7 @@ def build_about(F: Fonts, t: Theme, alt: str) -> str:
     body = section_head(c, F, t, "About")
     size, lh = 38, 50
     lines = c.wrap_balanced(F["text"], CONFIG["about"], size, W - COL, -0.012)
-    y = 46 - 0.729 * 17 + 0.729 * size
+    y = 46 - F["text"].cap_height * 17 + F["text"].cap_height * size
     for i, line in enumerate(lines):
         body.append(c.text(F["text"], line, COL, y + i * lh, size, t["ink"], -0.012, optical=True))
     y += (len(lines) - 1) * lh + 76
@@ -632,7 +633,7 @@ def build_contact(F: Fonts, t: Theme, alt: str) -> str:
     body = section_head(c, F, t, "Contact")
     size = 58
     lines = c.wrap_balanced(F["display"], CONFIG["contact_line"], size, W - COL, -0.03)
-    y = 46 - 0.729 * 17 + 0.729 * size
+    y = 46 - F["text"].cap_height * 17 + F["display"].cap_height * size
     for i, line in enumerate(lines):
         body.append(c.text(F["display"], line, COL, y + i * 70, size, t["ink"], -0.03, optical=True))
     return c.render(int(y + (len(lines) - 1) * 70 + 56), "".join(body), alt)
@@ -713,7 +714,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         ("Followers", activity.followers),
     ]
     colw = (W - COL) / 4
-    num_base = 46 - 0.729 * 17 + 0.729 * 60
+    num_base = 46 - F["text"].cap_height * 17 + F["display"].cap_height * 60
     for j, (label, value) in enumerate(metrics):
         x = COL + j * colw
         body.append(c.text(F["display"], fmt_count(value), x, num_base, 60, t["ink"], -0.03, optical=True))

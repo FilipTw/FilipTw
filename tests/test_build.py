@@ -83,3 +83,9 @@ def test_main_links_the_readme_to_head_outside_github_actions(monkeypatch, tmp_p
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
     build.main()
     assert f"/{build.CONFIG['username']}/HEAD/assets/hero-light.svg" in (tmp_path / "README.md").read_text()
+
+
+def test_mona_sans_cap_height_matches_the_grid_it_was_designed_with():
+    """The Grid lines up first lines by cap height; another font would move them."""
+    for role in ("display", "text", "medium"):
+        assert build.fonts()[role].cap_height == 0.729
