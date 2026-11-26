@@ -54,6 +54,12 @@ def test_a_cached_font_that_does_not_match_its_pin_is_downloaded_again(tmp_path)
     assert urls == [TARBALL]
 
 
+def test_a_package_without_the_font_is_refused(tmp_path):
+    with pytest.raises(FontUnavailable, match=r"other\.woff2 is not in @scope/face@1\.0\.0"):
+        load("other.woff2", tmp_path, npm()[0], sources={"other.woff2": SOURCE})
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_a_download_that_does_not_match_its_pin_is_refused_and_not_kept(tmp_path):
     with pytest.raises(FontUnavailable, match=r"face\.woff2.*@scope/face@1\.0\.0"):
         load(NAME, tmp_path, npm(b"wOF2 tampered")[0], sources={NAME: SOURCE})

@@ -307,12 +307,13 @@ def mix(a: str, b: str, t: float) -> str:
 
 
 def fonts() -> Fonts:
-    mona = fontstore.load("mona-sans-latin-wdth-normal.woff2", FONT_DIR)
+    load = partial(fontstore.load, cache_dir=FONT_DIR)
+    mona = load("mona-sans-latin-wdth-normal.woff2")
     return {
         "display": Font("d", mona, {"wdth": 125, "wght": 300}),
         "text": Font("t", mona, {"wdth": 100, "wght": 420}),
         "medium": Font("m", mona, {"wdth": 100, "wght": 540}),
-        "mono": Font("c", fontstore.load("monaspace-neon-latin-400-normal.woff2", FONT_DIR)),
+        "mono": Font("c", load("monaspace-neon-latin-400-normal.woff2")),
     }
 
 

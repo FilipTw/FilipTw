@@ -15,6 +15,16 @@ class FontSource:
     version: str
     sha256: str  # of the font file itself, not of the npm tarball
 
+    def __str__(self) -> str:
+        return f"{self.package}@{self.version}"
+
+    @property
+    def tarball(self) -> str:
+        return f"https://registry.npmjs.org/{self.package}/-/{self.package.split('/')[-1]}-{self.version}.tgz"
+
+    def matches(self, data: bytes) -> bool:
+        return hashlib.sha256(data).hexdigest() == self.sha256
+
 
 FONT_SOURCES = {
     "mona-sans-latin-wdth-normal.woff2": FontSource(
@@ -31,17 +41,13 @@ FONT_SOURCES = {
 
 
 class FontUnavailable(Exception):
-    """npm did not serve the pinned font file."""
+    """The downloaded package does not hold the pinned font file."""
 
 
 def download(url: str) -> bytes:
-    with urllib.request.urlopen(url, timeout=30) as r:
-        data: bytes = r.read()
+    with urllib.request.urlopen(url, timeout=30) as response:
+        data: bytes = response.read()
         return data
-
-
-def pinned(data: bytes, src: FontSource) -> bool:
-    return hashlib.sha256(data).hexdigest() == src.sha256
 
 
 def load(
@@ -51,20 +57,25 @@ def load(
     *,
     sources: Mapping[str, FontSource] = FONT_SOURCES,
 ) -> bytes:
-    """The bytes of the font file `name`, from cache_dir, or from npm when they are not cached yet."""
+    """The bytes of the font file `name`, which must be in sources. A copy in cache_dir that matches its
+    pin is used as is; otherwise the npm package is fetched and the file replaces the copy.
+    Raises FontUnavailable when the package lacks the file or it does not match its pin, and lets the
+    fetch's own errors (no network, HTTP errors, timeout) through."""
     src = sources[name]
     path = cache_dir / name
-    if path.exists() and pinned(cached := path.read_bytes(), src):
+    if path.exists() and src.matches(cached := path.read_bytes()):
         return cached
-    url = f"https://registry.npmjs.org/{src.package}/-/{src.package.split('/')[-1]}-{src.version}.tgz"
-    print(f"  fetching {src.package}@{src.version}")
-    with tarfile.open(fileobj=io.BytesIO(fetch(url))) as tar:
-        member = tar.extractfile(f"package/files/{name}")
+    print(f"  fetching {src}")
+    with tarfile.open(fileobj=io.BytesIO(fetch(src.tarball))) as tar:
+        try:
+            member = tar.extractfile(f"package/files/{name}")
+        except KeyError:
+            member = None
         if member is None:
-            raise FontUnavailable(f"{name} is not in {src.package}@{src.version}")
+            raise FontUnavailable(f"{name} is not in {src}")
         data = member.read()
-    if not pinned(data, src):
-        raise FontUnavailable(f"{name} from {src.package}@{src.version} does not match its pinned sha256")
+    if not src.matches(data):
+        raise FontUnavailable(f"{name} from {src} does not match its pinned sha256")
     cache_dir.mkdir(exist_ok=True)
     part = path.with_name(name + ".part")
     part.write_bytes(data)
