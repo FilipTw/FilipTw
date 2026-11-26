@@ -100,7 +100,6 @@ def test_every_colour_role_is_a_theme_field():
 
 
 def test_a_fact_too_long_for_the_about_section_stops_the_build(monkeypatch):
-    """The About Section is sized for two lines per fact; a third would be cut off without a word."""
     facts = [("Focus", "a rather long fact " * 12), ("Daily drivers", "Python")]
     monkeypatch.setitem(build.CONFIG, "facts", facts)
     with pytest.raises(ValueError, match="'Focus' fact wraps to"):

@@ -123,7 +123,7 @@ def poly_d(pts: Points) -> str:
 
 
 def hero_contours(c: Canvas) -> str:
-    """Contour lines of the loss surface, drawn in; the rings round the minimum lean to the accent."""
+    """Contour lines of the loss surface; the rings round the minimum are tinted toward the accent."""
     lines, _ = contour_lines()
     k_inner = max(k for k, _, hit in lines if hit) + 1
     paths = []
