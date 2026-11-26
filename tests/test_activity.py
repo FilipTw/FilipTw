@@ -3,6 +3,8 @@
 import http.client
 import re
 import urllib.error
+from dataclasses import replace
+from email.message import Message
 from pathlib import Path
 
 import pytest
@@ -39,15 +41,14 @@ CALENDAR_DAYS = [
     ("2026-06-26", 10, 1),
     ("2026-06-27", 1, 1),
 ]
-FROM_CALENDAR = {"days": CALENDAR_DAYS, "contributions": 212}
-FROM_GRAPHQL = {
-    "contributions": 3,
-    "days": [("2026-06-14", 1, 1), ("2026-06-15", 2, 2)],
-    "languages": {"Python": 3500, "Shell": 200},
-    "repos": 3,
-    "followers": 12,
-    "stars": 6,
-    "work": [
+FROM_GRAPHQL = Activity(
+    contributions=3,
+    days=[("2026-06-14", 1, 1), ("2026-06-15", 2, 2)],
+    languages={"Python": 3500, "Shell": 200},
+    repos=3,
+    followers=12,
+    stars=6,
+    work=[
         {
             "name": "tiny-agent",
             "description": None,
@@ -56,13 +57,13 @@ FROM_GRAPHQL = {
             "language": None,
         }
     ],
-}
-FROM_REST = {
-    "repos": 3,
-    "followers": 11,
-    "languages": {"Python": 120, "TeX": 1},
-    "stars": 5,
-    "work": [
+)
+FROM_REST = Activity(
+    repos=3,
+    followers=11,
+    languages={"Python": 120, "TeX": 1},
+    stars=5,
+    work=[
         {
             "name": "contour-lab",
             "description": "Loss landscapes as contour maps.",
@@ -78,7 +79,12 @@ FROM_REST = {
             "language": "TeX",
         },
     ],
-}
+)
+
+
+def with_calendar(activity):
+    """The public calendar's days and total, as tests/fixtures/github/contributions.html shows them."""
+    return replace(activity, days=CALENDAR_DAYS, contributions=212)
 
 
 def offline(url):
@@ -94,12 +100,15 @@ def fake_github(**override):
         REST_REPOS: (FIXTURES / "rest_repos.json").read_text(),
     }
     answers.update(
-        {{"graphql": GRAPHQL, "calendar": CALENDAR, "rest": REST_REPOS}[k]: v for k, v in override.items()}
+        {
+            {"graphql": GRAPHQL, "calendar": CALENDAR, "rest_repos": REST_REPOS}[k]: v
+            for k, v in override.items()
+        }
     )
 
     def transport(url, token=None, payload=None, accept="application/json"):
         if url == GRAPHQL and not token:
-            raise urllib.error.HTTPError(url, 401, "Unauthorized", {}, None)
+            raise urllib.error.HTTPError(url, 401, "Unauthorized", Message(), None)
         answer = answers[url]
         return answer(url) if callable(answer) else answer
 
@@ -111,7 +120,7 @@ def fetch(token, transport):
 
 
 def test_with_a_token_graphql_supplies_the_numbers_and_the_public_calendar_the_days():
-    assert fetch("token", fake_github()) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})
+    assert fetch("token", fake_github()) == with_calendar(FROM_GRAPHQL)
 
 
 def truncated(url):
@@ -124,19 +133,19 @@ def truncated(url):
     ids=["network", "truncated", "graphql-error", "no-such-user"],
 )
 def test_when_graphql_fails_the_rest_api_supplies_the_numbers(graphql):
-    assert fetch("token", fake_github(graphql=graphql)) == Activity(**{**FROM_REST, **FROM_CALENDAR})
+    assert fetch("token", fake_github(graphql=graphql)) == with_calendar(FROM_REST)
 
 
 def test_without_a_token_the_rest_api_supplies_the_numbers():
-    assert fetch(None, fake_github()) == Activity(**{**FROM_REST, **FROM_CALENDAR})
+    assert fetch(None, fake_github()) == with_calendar(FROM_REST)
 
 
 def test_when_the_rest_api_fails_too_only_the_calendar_is_known():
-    assert fetch(None, fake_github(rest=offline)) == Activity(**FROM_CALENDAR)
+    assert fetch(None, fake_github(rest_repos=offline)) == with_calendar(Activity())
 
 
 def test_when_the_calendar_fails_the_graphql_days_stay():
-    assert fetch("token", fake_github(calendar=offline)) == Activity(**FROM_GRAPHQL)
+    assert fetch("token", fake_github(calendar=offline)) == FROM_GRAPHQL
 
 
 def test_a_programming_error_is_not_mistaken_for_github_being_down():
@@ -151,11 +160,11 @@ def test_the_calendar_does_not_depend_on_the_order_of_html_attributes():
     page = (FIXTURES / "contributions.html").read_text()
     reordered = re.sub(r'(data-date="[^"]*") (id="[^"]*") (data-level="[^"]*")', r"\3 \2 \1", page)
     assert reordered != page
-    assert fetch("token", fake_github(calendar=reordered)) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})
+    assert fetch("token", fake_github(calendar=reordered)) == with_calendar(FROM_GRAPHQL)
 
 
 def test_calendar_counts_survive_whitespace_inside_the_tool_tips():
     page = (FIXTURES / "contributions.html").read_text()
     padded = re.sub(r"(<tool-tip[^>]*>)([^<]*)</tool-tip>", r"\1\n  \2\n</tool-tip>", page)
     assert padded != page
-    assert fetch("token", fake_github(calendar=padded)) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})
+    assert fetch("token", fake_github(calendar=padded)) == with_calendar(FROM_GRAPHQL)

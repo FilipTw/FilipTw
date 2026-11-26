@@ -61,8 +61,9 @@ def test_readme_alt_text_matches_each_svg_title(files):
     assert alts, "no pictures found in README.md"
     for stem, alt in alts:
         for theme in build.THEMES:
-            title = re.search(r"<title>([^<]*)</title>", files[f"assets/{stem}-{theme}.svg"]).group(1)
-            assert alt == title, f"{stem}: README says {alt!r}, SVG says {title!r}"
+            title = re.search(r"<title>([^<]*)</title>", files[f"assets/{stem}-{theme}.svg"])
+            assert title, f"{stem}-{theme}.svg has no <title>"
+            assert alt == title.group(1), f"{stem}: README says {alt!r}, SVG says {title.group(1)!r}"
 
 
 def test_main_keeps_the_previous_artwork_when_ci_gets_incomplete_activity(monkeypatch, tmp_path):

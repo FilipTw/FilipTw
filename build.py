@@ -26,6 +26,7 @@ from dataclasses import dataclass, replace
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
+from typing import TypedDict
 
 import contourpy
 import numpy as np
@@ -34,12 +35,27 @@ from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import TTFont
 
-from activity import fetch_activity, http
+from activity import Activity, Repo, fetch_activity, http
+
 
 # ════════════════════════════════════════════════════════════════════════════
 #  CONFIG
 # ════════════════════════════════════════════════════════════════════════════
-CONFIG = {
+class Config(TypedDict):
+    username: str
+    name: str
+    role: str
+    tagline: str
+    hero_caption: str
+    about: str
+    facts: list[tuple[str, str]]
+    stack: list[tuple[str, list[str]]]
+    contact_line: str
+    links: list[tuple[str, str, str]]  # (label, text shown, link)
+    work_limit: int
+
+
+CONFIG: Config = {
     "username": "FilipTw",
     "name": "Filip",
     "role": "Full-stack & AI developer",
@@ -66,7 +82,6 @@ CONFIG = {
         ("Editors & notes", ["PyCharm", "WebStorm", "Notion"]),
     ],
     "contact_line": "Let\u2019s build something together.",
-    # (label, text shown, link)
     "links": [
         ("Email", "FilipTw@gmail.com", "mailto:filip.twardawa@gmail.com"),
         ("LinkedIn", "linkedin.com/in/FilipTw", "https://www.linkedin.com/"),
@@ -79,7 +94,8 @@ CONFIG = {
 # ════════════════════════════════════════════════════════════════════════════
 #  Design tokens
 # ════════════════════════════════════════════════════════════════════════════
-THEMES = {
+Theme = dict[str, str]  # colour role -> hex
+THEMES: dict[str, Theme] = {
     "light": {
         "page": "#FFFFFF",
         "ink": "#0A0B0D",
@@ -115,7 +131,7 @@ ASSETS = "assets"  # where the SVGs live, relative to the repo root
 # ════════════════════════════════════════════════════════════════════════════
 #  Type engine: shape with HarfBuzz, draw outlines with fontTools
 # ════════════════════════════════════════════════════════════════════════════
-def font_file(name):
+def font_file(name: str) -> Path:
     FONT_DIR.mkdir(exist_ok=True)
     path = FONT_DIR / name
     if not path.exists():
@@ -123,12 +139,15 @@ def font_file(name):
         url = f"https://registry.npmjs.org/{pkg}/-/{pkg.split('/')[-1]}-{ver}.tgz"
         print(f"  fetching {pkg}@{ver}")
         with tarfile.open(fileobj=io.BytesIO(urllib.request.urlopen(url).read())) as tar:
-            path.write_bytes(tar.extractfile(f"package/files/{name}").read())
+            member = tar.extractfile(f"package/files/{name}")
+            if member is None:
+                raise FileNotFoundError(f"{name} is not in {pkg}@{ver}")
+            path.write_bytes(member.read())
     return path
 
 
 class Font:
-    _raw = {}
+    _raw: dict[Path, tuple[TTFont, bytes]] = {}
 
     def __init__(self, key, file, location=None):
         path = font_file(file)
@@ -168,6 +187,9 @@ class Font:
         pen = BoundsPen(self.glyphs)
         self.glyphs[glyph].draw(pen)
         return pen.bounds[0] if pen.bounds else 0
+
+
+Fonts = dict[str, Font]  # role (display, text, mono, ...) -> Font
 
 
 class Canvas:
@@ -247,13 +269,13 @@ class Canvas:
         )
 
 
-def mix(a, b, t):
+def mix(a: str, b: str, t: float) -> str:
     ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
     cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
     return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(ca, cb, strict=True))
 
 
-def fonts():
+def fonts() -> Fonts:
     mona = "mona-sans-latin-wdth-normal.woff2"
     return {
         "display": Font("d", mona, {"wdth": 125, "wght": 300}),
@@ -294,10 +316,10 @@ def descent(start=(110.0, 128.0), lr=2500.0, beta=0.88, steps=220, h=0.5):
         vel = beta * vel - lr * g
         p = p + vel
         pts.append(p.copy())
-    pts = np.array(pts)
-    moving = np.hypot(*np.diff(pts, axis=0).T) > 0.35
+    path = np.array(pts)
+    moving = np.hypot(*np.diff(path, axis=0).T) > 0.35
     last = len(moving) - int(np.argmax(moving[::-1]))
-    return pts[: last + 1]
+    return path[: last + 1]
 
 
 def smooth(pts, times, step=7.0):
@@ -366,7 +388,7 @@ def poly_d(pts):
     return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
 
 
-def build_hero(F, t, alt):
+def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas()
     H = HERO_H
     lines, zmin = contour_lines()
@@ -555,7 +577,7 @@ def build_hero(F, t, alt):
 # ════════════════════════════════════════════════════════════════════════════
 #  Editorial sections
 # ════════════════════════════════════════════════════════════════════════════
-def section_head(c, F, t, label, right=None):
+def section_head(c: Canvas, F: Fonts, t: Theme, label: str, right: str | None = None) -> list[str]:
     out = [
         f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
         c.text(F["text"], label, 0, 46, 17, t["muted"]),
@@ -565,7 +587,7 @@ def section_head(c, F, t, label, right=None):
     return out
 
 
-def build_about(F, t, alt):
+def build_about(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas()
     body = section_head(c, F, t, "About")
     size, lh = 38, 50
@@ -583,7 +605,7 @@ def build_about(F, t, alt):
     return c.render(int(y + 34 + 29 * 2 + 20), "".join(body), alt)
 
 
-def build_stack(F, t, alt):
+def build_stack(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas()
     body = section_head(c, F, t, "Stack")
     groups = CONFIG["stack"]
@@ -605,7 +627,7 @@ def build_stack(F, t, alt):
     return c.render(int(y - 30), "".join(body), alt)
 
 
-def build_contact(F, t, alt):
+def build_contact(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas()
     body = section_head(c, F, t, "Contact")
     size = 58
@@ -616,7 +638,7 @@ def build_contact(F, t, alt):
     return c.render(int(y + (len(lines) - 1) * 70 + 56), "".join(body), alt)
 
 
-def build_link_row(F, t, alt, label, value, last=False):
+def build_link_row(F: Fonts, t: Theme, alt: str, label: str, value: str, last: bool = False) -> str:
     c = Canvas()
     H = 78
     body = [
@@ -629,7 +651,7 @@ def build_link_row(F, t, alt, label, value, last=False):
     return c.render(H, "".join(body), alt)
 
 
-def build_work_row(F, t, alt, repo, head=False, last=False):
+def build_work_row(F: Fonts, t: Theme, alt: str, repo: Repo, head: bool = False, last: bool = False) -> str:
     c = Canvas()
     H = 112
     body = []
@@ -654,7 +676,7 @@ def build_work_row(F, t, alt, repo, head=False, last=False):
     return c.render(H, "".join(body), alt)
 
 
-def build_colophon(F, t, alt, today):
+def build_colophon(F: Fonts, t: Theme, alt: str, today: dt.date) -> str:
     c = Canvas()
     body = [
         f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
@@ -675,12 +697,12 @@ def build_colophon(F, t, alt, today):
 # ════════════════════════════════════════════════════════════════════════════
 #  Activity: the live GitHub numbers, drawn
 # ════════════════════════════════════════════════════════════════════════════
-def fmt_count(v):
+def fmt_count(v: int | None) -> str:
     """A metric as the profile shows it: 1,234, or a dash when GitHub did not report it."""
     return f"{v:,}" if isinstance(v, int) else "\u2013"
 
 
-def build_activity(F, t, alt, activity, today):
+def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.date) -> str:
     c = Canvas()
     body = section_head(c, F, t, "Activity")
 
@@ -701,7 +723,7 @@ def build_activity(F, t, alt, activity, today):
     # contribution calendar: full width, like the hero, so the cells stay legible
     days = (activity.days or [])[-371:]
     y_cal = num_base + 112
-    weeks = []
+    weeks: list[list[tuple[dt.date, int, int]]] = []
     for date, count, level in days:
         d = dt.date.fromisoformat(date)
         if not weeks or d.isoweekday() % 7 == 0:
@@ -806,21 +828,21 @@ class Section:
 
     stem: str
     alt: str
-    draw: Callable[[dict, dict, str], str]  # (fonts, Theme, alt) -> SVG
+    draw: Callable[[Fonts, Theme, str], str]  # (fonts, Theme, alt) -> SVG
     link: str | None = None
     gap: Gap = Gap.NONE
 
 
-def row_group(rows):
+def row_group(rows: list[Section]) -> list[Section]:
     """Rows of one group follow each other directly; the last one ends the group with a Section break."""
     return rows[:-1] + [replace(rows[-1], gap=Gap.SECTION)] if rows else rows
 
 
-def work_alt(repo):
+def work_alt(repo: Repo) -> str:
     return f"{repo['name']}. {repo['description']}" if repo.get("description") else repo["name"]
 
 
-def sections(activity, today):
+def sections(activity: Activity, today: dt.date) -> list[Section]:
     """Every Section of the profile, in README order."""
     work = activity.work or []
     links = CONFIG["links"]
@@ -868,7 +890,7 @@ def sections(activity, today):
     ]
 
 
-def render_readme(svgs, branch):
+def render_readme(svgs: list[tuple[Section, dict[str, str]]], branch: str) -> str:
     """svgs: [(Section, {Theme name: SVG})]. Each picture URL carries a hash of its SVGs to bust caches."""
     user = CONFIG["username"]
     base = f"https://raw.githubusercontent.com/{user}/{user}/{branch}/assets"
@@ -897,7 +919,7 @@ def render_readme(svgs, branch):
     return "\n".join(out).rstrip() + "\n"
 
 
-def build_profile(activity, today, F, branch):
+def build_profile(activity: Activity, today: dt.date, F: Fonts, branch: str) -> dict[str, str]:
     """Every generated file, as {path relative to the repo root: text}. Pure: nothing is read or written."""
     svgs = [(s, {name: s.draw(F, t, s.alt) for name, t in THEMES.items()}) for s in sections(activity, today)]
     files = {f"{ASSETS}/{s.stem}-{name}.svg": svg for s, by_theme in svgs for name, svg in by_theme.items()}
@@ -905,7 +927,7 @@ def build_profile(activity, today, F, branch):
     return files
 
 
-def write_profile(files, root):
+def write_profile(files: dict[str, str], root: Path) -> None:
     """Write the built files under root, then remove SVGs of Sections that no longer exist."""
     assets = root / ASSETS
     assets.mkdir(exist_ok=True)
@@ -918,7 +940,7 @@ def write_profile(files, root):
             print(f"  removed {ASSETS}/{old.name}")
 
 
-def main():
+def main() -> None:
     F = fonts()
     print("  fetching activity")
     activity = fetch_activity(
