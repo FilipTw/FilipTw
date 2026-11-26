@@ -11,7 +11,7 @@ GitHub does not let SVG images load fonts. The GitHub Action in
 and any change to CONFIG is rebuilt automatically after you commit it.
 
 Typefaces: Mona Sans and Monaspace Neon by GitHub (SIL Open Font License),
-downloaded from npm into .fonts/ on first run.
+downloaded from npm into .fonts/ and checked against the hashes pinned in fontstore.py.
 """
 
 import datetime as dt
@@ -19,8 +19,6 @@ import hashlib
 import html
 import io
 import os
-import tarfile
-import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from enum import Enum, auto
@@ -35,6 +33,7 @@ from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.ttLib import TTFont
 
+import fontstore
 from activity import Activity, Repo, fetch_activity, http
 
 
@@ -119,10 +118,6 @@ THEMES: dict[str, Theme] = {
 }
 W = 1200  # every asset shares this width, so edges align in the README
 COL = 300  # the Grid: the label column ends and the content column starts here
-FONT_SOURCES = {
-    "mona-sans-latin-wdth-normal.woff2": ("@fontsource-variable/mona-sans", "5.3.0"),
-    "monaspace-neon-latin-400-normal.woff2": ("@fontsource/monaspace-neon", "5.3.0"),
-}
 ROOT = Path(__file__).resolve().parent
 FONT_DIR = ROOT / ".fonts"
 ASSETS = "assets"  # where the SVGs live, relative to the repo root
@@ -131,35 +126,15 @@ ASSETS = "assets"  # where the SVGs live, relative to the repo root
 # ════════════════════════════════════════════════════════════════════════════
 #  Type engine: shape with HarfBuzz, draw outlines with fontTools
 # ════════════════════════════════════════════════════════════════════════════
-def font_file(name: str) -> Path:
-    FONT_DIR.mkdir(exist_ok=True)
-    path = FONT_DIR / name
-    if not path.exists():
-        pkg, ver = FONT_SOURCES[name]
-        url = f"https://registry.npmjs.org/{pkg}/-/{pkg.split('/')[-1]}-{ver}.tgz"
-        print(f"  fetching {pkg}@{ver}")
-        with tarfile.open(fileobj=io.BytesIO(urllib.request.urlopen(url).read())) as tar:
-            member = tar.extractfile(f"package/files/{name}")
-            if member is None:
-                raise FileNotFoundError(f"{name} is not in {pkg}@{ver}")
-            path.write_bytes(member.read())
-    return path
-
-
 class Font:
-    _raw: dict[Path, tuple[TTFont, bytes]] = {}
-
-    def __init__(self, key: str, file: str, location: dict[str, float] | None = None) -> None:
-        path = font_file(file)
-        if path not in Font._raw:
-            tt = TTFont(path)
-            tt.flavor = None
-            buf = io.BytesIO()
-            tt.save(buf)
-            Font._raw[path] = (tt, buf.getvalue())
-        self.tt, raw = Font._raw[path]
+    def __init__(self, key: str, data: bytes, location: dict[str, float] | None = None) -> None:
+        """data is a font file (woff2 included); location picks an instance of a variable font."""
+        self.tt = TTFont(io.BytesIO(data))
+        self.tt.flavor = None  # HarfBuzz reads plain sfnt, not woff2
+        sfnt = io.BytesIO()
+        self.tt.save(sfnt)
         self.key, self.location = key, location or {}
-        self.hb = hb.Font(hb.Face(raw))
+        self.hb = hb.Font(hb.Face(sfnt.getvalue()))
         if self.location:
             self.hb.set_variations(self.location)
         self.upem = self.tt["head"].unitsPerEm
@@ -332,12 +307,12 @@ def mix(a: str, b: str, t: float) -> str:
 
 
 def fonts() -> Fonts:
-    mona = "mona-sans-latin-wdth-normal.woff2"
+    mona = fontstore.load("mona-sans-latin-wdth-normal.woff2", FONT_DIR)
     return {
         "display": Font("d", mona, {"wdth": 125, "wght": 300}),
         "text": Font("t", mona, {"wdth": 100, "wght": 420}),
         "medium": Font("m", mona, {"wdth": 100, "wght": 540}),
-        "mono": Font("c", "monaspace-neon-latin-400-normal.woff2"),
+        "mono": Font("c", fontstore.load("monaspace-neon-latin-400-normal.woff2", FONT_DIR)),
     }
 
 
