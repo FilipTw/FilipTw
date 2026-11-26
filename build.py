@@ -93,29 +93,49 @@ CONFIG: Config = {
 # ════════════════════════════════════════════════════════════════════════════
 #  Design tokens
 # ════════════════════════════════════════════════════════════════════════════
-Theme = dict[str, str]  # colour role -> hex
+Role = Literal["page", "ink", "muted", "faint", "line", "contour", "accent", "cell"]
+
+
+@dataclass(frozen=True)
+class Theme:
+    """Hex colours by role."""
+
+    page: str
+    ink: str
+    muted: str
+    faint: str
+    line: str
+    contour: str
+    accent: str
+    cell: str
+
+    def colour(self, role: Role) -> str:
+        return str(getattr(self, role))
+
+
 THEMES: dict[str, Theme] = {
-    "light": {
-        "page": "#FFFFFF",
-        "ink": "#0A0B0D",
-        "muted": "#676C75",
-        "faint": "#A5AAB2",
-        "line": "#E2E4E8",
-        "contour": "#CDD1D8",
-        "accent": "#2B3BFF",
-        "cell": "#E8EBEF",
-    },
-    "dark": {
-        "page": "#0D1117",
-        "ink": "#EEF1F5",
-        "muted": "#8C939D",
-        "faint": "#565D67",
-        "line": "#262C35",
-        "contour": "#28303B",
-        "accent": "#7D87FF",
-        "cell": "#1D232C",
-    },
+    "light": Theme(
+        page="#FFFFFF",
+        ink="#0A0B0D",
+        muted="#676C75",
+        faint="#A5AAB2",
+        line="#E2E4E8",
+        contour="#CDD1D8",
+        accent="#2B3BFF",
+        cell="#E8EBEF",
+    ),
+    "dark": Theme(
+        page="#0D1117",
+        ink="#EEF1F5",
+        muted="#8C939D",
+        faint="#565D67",
+        line="#262C35",
+        contour="#28303B",
+        accent="#7D87FF",
+        cell="#1D232C",
+    ),
 }
+
 W = 1200  # every asset shares this width, so edges align in the README
 COL = 300  # the Grid: the label column ends and the content column starts here
 ROOT = Path(__file__).resolve().parent
@@ -175,7 +195,7 @@ class Type:
 
     font: str
     size: float
-    colour: str
+    colour: Role
     tracking: float = 0.0
 
 
@@ -240,7 +260,7 @@ class Canvas:
     ) -> str:
         run = self.glyphs(text, x, y, setting, anchor=anchor, optical=optical)
         inner = "".join(self.use(*g) for g in run)
-        return f'<g fill="{self.t[setting.colour]}"{attrs}>{inner}</g>'
+        return f'<g fill="{self.t.colour(setting.colour)}"{attrs}>{inner}</g>'
 
     def wrap(self, text: str, setting: Type, width: float) -> list[str]:
         lines, line = [], ""
@@ -271,7 +291,7 @@ class Canvas:
 
     def rule(self, y: int = 0, span: Literal["full", "content"] = "full") -> str:
         x = 0 if span == "full" else COL
-        return f'<rect x="{x}" y="{y}" width="{W - x}" height="1" fill="{self.t["line"]}"/>'
+        return f'<rect x="{x}" y="{y}" width="{W - x}" height="1" fill="{self.t.line}"/>'
 
     def head(self, label: str) -> list[str]:
         """How a Section opens: a full-width Rule, then its Label in the label column."""
@@ -437,10 +457,10 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
         depth = 1 - k / k_inner
         tint = min(max((depth - 0.42) / 0.58, 0), 1) ** 1.3 if hit else 0
         if tint > 0:
-            stroke = mix(t["contour"], t["accent"], 0.12 + 0.88 * tint)
+            stroke = mix(t.contour, t.accent, 0.12 + 0.88 * tint)
             width = 1.1 + 0.4 * tint
         else:
-            stroke, width = t["contour"], 1.1
+            stroke, width = t.contour, 1.1
         paths.append(
             f'<path class="ct" pathLength="1" style="animation-delay:{0.05 + k * 0.032:.3f}s" '
             f'd="{poly_d(line)}" stroke="{stroke}" stroke-width="{width:.2f}"/>'
@@ -482,18 +502,18 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     sx, sy = pts[0]
     ex, ey = pts[-1]
     body.append(
-        f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="4.5" fill="none" stroke="{t["muted"]}" '
+        f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="4.5" fill="none" stroke="{t.muted}" '
         f'stroke-width="1.4" class="fd" style="animation-delay:{t0 - 0.3}s"/>'
     )
     body.append(
-        f'<path class="trail" pathLength="1" d="{poly_d(curve)}" fill="none" stroke="{t["accent"]}" '
+        f'<path class="trail" pathLength="1" d="{poly_d(curve)}" fill="none" stroke="{t.accent}" '
         f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
     )
     body.append(
         f'<g class="dot" transform="translate({ex:.1f} {ey:.1f})">'
-        f'<circle class="pulse" r="7" fill="none" stroke="{t["accent"]}" stroke-width="1.4"/>'
-        f'<circle r="13" fill="{t["accent"]}" opacity=".16"/>'
-        f'<circle r="6" fill="{t["accent"]}"/></g>'
+        f'<circle class="pulse" r="7" fill="none" stroke="{t.accent}" stroke-width="1.4"/>'
+        f'<circle r="13" fill="{t.accent}" opacity=".16"/>'
+        f'<circle r="6" fill="{t.accent}"/></g>'
     )
     c.css.append(
         f".pulse{{transform-box:fill-box;transform-origin:center;"
@@ -506,7 +526,7 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     body.append(
         f'<g class="fd" style="animation-delay:{t0 + dur:.2f}s">'
         f'<path d="M{ex + 10:.1f} {ey - 10:.1f}L{lx - 40:.1f} {ly:.1f}H{lx - 8:.1f}" fill="none" '
-        f'stroke="{t["muted"]}" stroke-width="1"/>' + c.text("minimum", lx, ly + 5, note) + "</g>"
+        f'stroke="{t.muted}" stroke-width="1"/>' + c.text("minimum", lx, ly + 5, note) + "</g>"
     )
     body.append(
         c.text("init", sx, sy + 30, note, anchor="middle", attrs=f' class="fd" style="{start_delay}"')
@@ -564,7 +584,7 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
         f'<clipPath id="nm"><rect x="-20" y="{top:.0f}" width="{W + 40}" '
         f'height="{bottom - top:.0f}"/></clipPath>'
     )
-    body.append(f'<g clip-path="url(#nm)" fill="{t["ink"]}">{els}</g>')
+    body.append(f'<g clip-path="url(#nm)" fill="{t.ink}">{els}</g>')
     c.css.append(
         ".ch{animation:rise 1.4s cubic-bezier(.19,1,.22,1) both}"
         f"@keyframes rise{{from{{transform:translateY({bottom - top:.0f}px)}}to{{transform:none}}}}"
@@ -722,7 +742,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         weeks[-1].append((d, count, level))
     pitch = W / max(len(weeks), 53)
     cell = pitch * 0.82
-    ramp = [t["cell"]] + [mix(t["cell"], t["accent"], a) for a in (0.4, 0.62, 0.82, 1.0)]
+    ramp = [t.cell] + [mix(t.cell, t.accent, a) for a in (0.4, 0.62, 0.82, 1.0)]
     cols, months, last_month = [], [], None
     for wi, week in enumerate(weeks):
         x = wi * pitch
@@ -765,7 +785,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         if rest / total > 0.01:
             top.append(("Other", rest))
         total = sum(v for _, v in top)
-        shades = [t["accent"]] + [mix(t["page"], t["accent"], a) for a in (0.66, 0.44, 0.28, 0.16, 0.08)]
+        shades = [t.accent] + [mix(t.page, t.accent, a) for a in (0.66, 0.44, 0.28, 0.16, 0.08)]
         body.append(c.text("Most used languages", COL, y - 18, legend))
         x = COL
         gap = 4
