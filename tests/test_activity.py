@@ -1,4 +1,5 @@
 """fetch_activity merges GitHub's sources; a fake transport answers from tests/fixtures/github/."""
+import http.client
 import re
 import urllib.error
 from pathlib import Path
@@ -73,8 +74,13 @@ def test_with_a_token_graphql_supplies_the_numbers_and_the_public_calendar_the_d
     assert fetch("token", fake_github()) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})
 
 
-@pytest.mark.parametrize("graphql", [offline, '{"errors": [{"message": "rate limited"}]}'],
-                         ids=["network", "graphql-error"])
+def truncated(url):
+    raise http.client.IncompleteRead(b"{")
+
+
+@pytest.mark.parametrize("graphql", [offline, truncated, '{"errors": [{"message": "rate limited"}]}',
+                                     '{"data": {"user": null}}'],
+                         ids=["network", "truncated", "graphql-error", "no-such-user"])
 def test_when_graphql_fails_the_rest_api_supplies_the_numbers(graphql):
     assert fetch("token", fake_github(graphql=graphql)) == Activity(**{**FROM_REST, **FROM_CALENDAR})
 
@@ -103,3 +109,10 @@ def test_the_calendar_does_not_depend_on_the_order_of_html_attributes():
     reordered = re.sub(r'(data-date="[^"]*") (id="[^"]*") (data-level="[^"]*")', r"\3 \2 \1", page)
     assert reordered != page
     assert fetch("token", fake_github(calendar=reordered)) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})
+
+
+def test_calendar_counts_survive_whitespace_inside_the_tool_tips():
+    page = (FIXTURES / "contributions.html").read_text()
+    padded = re.sub(r'(<tool-tip[^>]*>)([^<]*)</tool-tip>', r"\1\n  \2\n</tool-tip>", page)
+    assert padded != page
+    assert fetch("token", fake_github(calendar=padded)) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})

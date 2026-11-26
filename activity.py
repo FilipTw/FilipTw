@@ -1,4 +1,5 @@
 """Activity: the live numbers on the profile, fetched from GitHub."""
+import http.client
 import json
 import re
 import urllib.request
@@ -28,9 +29,9 @@ class ActivityUnavailable(Exception):
     """GitHub answered, but not with the numbers asked for."""
 
 
-# What a failing source looks like: network or HTTP errors, a body that is not JSON,
-# a response missing a field, or ActivityUnavailable. Anything else is a bug and propagates.
-UNAVAILABLE = (OSError, ValueError, LookupError, ActivityUnavailable)
+# What a failing source looks like: network or HTTP errors, a cut-off response, a body that is
+# not JSON, a response missing a field, or ActivityUnavailable. Anything else is a bug and propagates.
+UNAVAILABLE = (OSError, http.client.HTTPException, ValueError, LookupError, ActivityUnavailable)
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 REPO_FIELDS = "name description url stargazerCount primaryLanguage{name}"
@@ -66,6 +67,8 @@ def fetch_graphql(user, token, transport, work_limit):
     if res.get("errors"):
         raise ActivityUnavailable(res["errors"][0].get("message"))
     u = res["data"]["user"]
+    if u is None:
+        raise ActivityUnavailable(f"no GitHub user {user}")
 
     def repo(n):
         return {"name": n["name"], "description": n["description"], "url": n["url"],
@@ -98,7 +101,7 @@ def fetch_calendar(user, transport):
         raise ActivityUnavailable("no calendar cells on the page")
     days = []
     for date, cid, level in page.cells:
-        m = re.match(r"([\d,]+) contribution", page.tips.get(cid, ""))  # "No contributions on …" counts 0
+        m = re.match(r"([\d,]+) contribution", page.tips.get(cid, "").strip())  # "No contributions on …" counts 0
         days.append((date, int(m.group(1).replace(",", "")) if m else 0, int(level)))
     days.sort()
     return {"days": days, "contributions": sum(d[1] for d in days)}
@@ -150,7 +153,8 @@ def fetch_rest(user, token, transport, work_limit):
 def fetch_activity(user, token, transport, *, work_limit):
     """The profile's Activity, merged from three sources, each of which may fail:
     GraphQL when there is a token, else (or when it fails) the REST API, for the repository numbers;
-    then the public calendar, whose days and total replace GraphQL's because they match the profile page.
+    then the public calendar, whose days and total replace GraphQL's because they match the profile page;
+    if the calendar fails, GraphQL's days and total stay.
 
     transport(url, token=None, payload=None, accept=...) -> response text; `http` in production.
     work_limit caps the selected work, which never includes the profile repository itself."""
