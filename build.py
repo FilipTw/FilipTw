@@ -26,7 +26,7 @@ from dataclasses import dataclass, replace
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 import contourpy
 import numpy as np
@@ -206,6 +206,7 @@ class Type:
 
 Glyph = tuple[str, float, float, float]  # (outline id, x, y, scale)
 LABEL = Type("text", 17, "muted")  # the Grid's Label, also the hero caption
+LABEL_BASELINE = 46  # a Section's Label sits on this baseline, below the opening Rule
 
 
 class Canvas:
@@ -290,6 +291,26 @@ class Canvas:
         while text and self.measure(text + "\u2026", style) > width:
             text = text[:-1]
         return text.rstrip(" ,.;:") + "\u2026"
+
+    def rule(self, y: int = 0, span: Literal["full", "content"] = "full") -> str:
+        """A Rule across the full width, or across the content column only."""
+        x = 0 if span == "full" else COL
+        return f'<rect x="{x}" y="{y}" width="{W - x}" height="1" fill="{self.t["line"]}"/>'
+
+    def head(self, label: str) -> list[str]:
+        """How a Section opens: a full-width Rule, then its Label in the label column."""
+        return [self.rule(), self.text(label, 0, LABEL_BASELINE, LABEL)]
+
+    @staticmethod
+    def columns(n: int) -> list[float]:
+        """The x of each of n equal columns across the content column."""
+        width = (W - COL) / n
+        return [COL + j * width for j in range(n)]
+
+    def first_baseline(self, style: Type) -> float:
+        """The baseline that puts the cap height of a first line level with the Label's."""
+        label = self.F[LABEL.font].cap_height * LABEL.size
+        return LABEL_BASELINE - label + self.F[style.font].cap_height * style.size
 
     def render(self, height: int, body: str, label: str) -> str:
         defs = "".join(f'<path id="{k}" d="{d}"/>' for k, d in self.defs.items() if d)
@@ -590,52 +611,40 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 #  Editorial sections
 # ════════════════════════════════════════════════════════════════════════════
-def section_head(c: Canvas, F: Fonts, t: Theme, label: str, right: str | None = None) -> list[str]:
-    out = [
-        f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
-        c.text(label, 0, 46, LABEL),
-    ]
-    if right:
-        out.append(c.text(right, W, 46, LABEL, anchor="end"))
-    return out
-
-
 def build_about(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas(F, t)
-    body = section_head(c, F, t, "About")
+    body = c.head("About")
     size, lh = 38, 50
     lead = Type("text", size, "ink", -0.012)
     lines = c.wrap_balanced(CONFIG["about"], lead, W - COL)
-    y = 46 - F["text"].cap_height * 17 + F["text"].cap_height * size
+    y = c.first_baseline(lead)
     for i, line in enumerate(lines):
         body.append(c.text(line, COL, y + i * lh, lead, optical=True))
     y += (len(lines) - 1) * lh + 76
-    colw = (W - COL) / len(CONFIG["facts"])
+    facts = CONFIG["facts"]
     fact = Type("text", 21, "ink")
-    for j, (label, value) in enumerate(CONFIG["facts"]):
-        x = COL + j * colw
+    measure = (W - COL) / len(facts) - 40
+    for (label, value), x in zip(facts, c.columns(len(facts)), strict=True):
         body.append(c.text(label, x, y, LABEL))
-        for k, line in enumerate(c.wrap(value, fact, colw - 40)):
+        for k, line in enumerate(c.wrap(value, fact, measure)):
             body.append(c.text(line, x, y + 34 + k * 29, fact))
     return c.render(int(y + 34 + 29 * 2 + 20), "".join(body), alt)
 
 
 def build_stack(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas(F, t)
-    body = section_head(c, F, t, "Stack")
+    body = c.head("Stack")
     groups = CONFIG["stack"]
     cols = 3
-    colw = (W - COL) / cols
-    y0, lh = 46, 34
+    lh = 34
     tool = Type("text", 24, "ink", -0.01)
     row_h = []
     for r in range(0, len(groups), cols):
         tallest = max(len(items) for _, items in groups[r : r + cols])
         row_h.append(30 + tallest * lh + 46)
-    y = y0
+    y = LABEL_BASELINE
     for r, start in enumerate(range(0, len(groups), cols)):
-        for j, (label, items) in enumerate(groups[start : start + cols]):
-            x = COL + j * colw
+        for (label, items), x in zip(groups[start : start + cols], c.columns(cols), strict=False):
             body.append(c.text(label, x, y, LABEL))
             for k, item in enumerate(items):
                 body.append(c.text(item, x, y + 40 + k * lh, tool))
@@ -645,11 +654,11 @@ def build_stack(F: Fonts, t: Theme, alt: str) -> str:
 
 def build_contact(F: Fonts, t: Theme, alt: str) -> str:
     c = Canvas(F, t)
-    body = section_head(c, F, t, "Contact")
+    body = c.head("Contact")
     size = 58
     line_type = Type("display", size, "ink", -0.03)
     lines = c.wrap_balanced(CONFIG["contact_line"], line_type, W - COL)
-    y = 46 - F["text"].cap_height * 17 + F["display"].cap_height * size
+    y = c.first_baseline(line_type)
     for i, line in enumerate(lines):
         body.append(c.text(line, COL, y + i * 70, line_type, optical=True))
     return c.render(int(y + (len(lines) - 1) * 70 + 56), "".join(body), alt)
@@ -659,26 +668,19 @@ def build_link_row(F: Fonts, t: Theme, alt: str, label: str, value: str, last: b
     c = Canvas(F, t)
     H = 78
     body = [
-        f'<rect x="{COL}" y="0" width="{W - COL}" height="1" fill="{t["line"]}"/>',
+        c.rule(span="content"),
         c.text(label, COL, 47, LABEL),
         c.text(value, COL + 300, 48, Type("text", 24, "accent", -0.01)),
     ]
     if last:
-        body.append(f'<rect x="{COL}" y="{H - 1}" width="{W - COL}" height="1" fill="{t["line"]}"/>')
+        body.append(c.rule(H - 1, span="content"))
     return c.render(H, "".join(body), alt)
 
 
 def build_work_row(F: Fonts, t: Theme, alt: str, repo: Repo, head: bool = False, last: bool = False) -> str:
     c = Canvas(F, t)
     H = 112
-    body = []
-    if head:
-        body += [
-            f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
-            c.text("Selected work", 0, 46, LABEL),
-        ]
-    else:
-        body.append(f'<rect x="{COL}" y="0" width="{W - COL}" height="1" fill="{t["line"]}"/>')
+    body = c.head("Selected work") if head else [c.rule(span="content")]
     note, description = Type("mono", 15, "muted"), Type("text", 18, "muted")
     body.append(c.text(repo["name"], COL, 56, Type("display", 34, "ink", -0.02), optical=True))
     desc = c.fit(repo["description"] or "No description yet", description, 620)
@@ -688,7 +690,7 @@ def build_work_row(F: Fonts, t: Theme, alt: str, repo: Repo, head: bool = False,
     stars = repo["stars"]
     body.append(c.text(f"{stars} star{'' if stars == 1 else 's'}", W, 88, note, anchor="end"))
     if last:
-        body.append(f'<rect x="{COL}" y="{H - 1}" width="{W - COL}" height="1" fill="{t["line"]}"/>')
+        body.append(c.rule(H - 1, span="content"))
     return c.render(H, "".join(body), alt)
 
 
@@ -697,9 +699,9 @@ def build_colophon(F: Fonts, t: Theme, alt: str, today: dt.date) -> str:
     small = Type("text", 16, "muted")
     credits = "Set in Mona Sans and Monaspace Neon. Artwork generated with Python."
     body = [
-        f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
-        c.text(f"{CONFIG['name']}, {today.year}", 0, 46, small),
-        c.text(credits, W, 46, small, anchor="end"),
+        c.rule(),
+        c.text(f"{CONFIG['name']}, {today.year}", 0, LABEL_BASELINE, small),
+        c.text(credits, W, LABEL_BASELINE, small, anchor="end"),
     ]
     return c.render(70, "".join(body), alt)
 
@@ -714,7 +716,7 @@ def fmt_count(v: int | None) -> str:
 
 def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.date) -> str:
     c = Canvas(F, t)
-    body = section_head(c, F, t, "Activity")
+    body = c.head("Activity")
 
     metrics = [
         ("Contributions this year", activity.contributions),
@@ -722,11 +724,9 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         ("Stars earned", activity.stars),
         ("Followers", activity.followers),
     ]
-    colw = (W - COL) / 4
     figure, small = Type("display", 60, "ink", -0.03), Type("text", 16, "muted")
-    num_base = 46 - F["text"].cap_height * 17 + F["display"].cap_height * 60
-    for j, (label, value) in enumerate(metrics):
-        x = COL + j * colw
+    num_base = c.first_baseline(figure)
+    for (label, value), x in zip(metrics, c.columns(len(metrics)), strict=True):
         body.append(c.text(fmt_count(value), x, num_base, figure, optical=True))
         body.append(c.text(label, x, num_base + 36, small))
 
