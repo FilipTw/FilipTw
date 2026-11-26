@@ -15,7 +15,7 @@ class Activity:
     repos: Optional[int] = None
     stars: Optional[int] = None
     followers: Optional[int] = None
-    languages: Optional[dict] = None   # {language: weight}
+    languages: Optional[dict] = None   # {language: weight}; only the shares are drawn, see below
     work: Optional[list] = None        # [{name, description, url, stars, language}]
 
     @property
@@ -59,6 +59,8 @@ def pick_work(repos, user, limit):
 
 
 def fetch_graphql(user, token, transport, work_limit):
+    """Everything in one query. Languages weigh bytes of code per language in each repository.
+    Stars are summed over the 100 most starred repositories only (first:100), enough for this profile."""
     res = json.loads(transport("https://api.github.com/graphql", token,
                                {"query": QUERY, "variables": {"login": user}}))
     if res.get("errors"):
@@ -127,7 +129,8 @@ class CalendarPage(HTMLParser):
 
 
 def fetch_rest(user, token, transport, work_limit):
-    """Fallback for the repository numbers when GraphQL is unavailable."""
+    """Fallback for the repository numbers when GraphQL is unavailable. REST has no per-language
+    byte counts, so each repository's size in KB counts for its primary language: the shares differ."""
     profile = json.loads(transport(f"https://api.github.com/users/{user}", token))
     repos = json.loads(transport(f"https://api.github.com/users/{user}/repos?per_page=100&type=owner", token))
     own = sorted((r for r in repos if not r["fork"]), key=lambda r: -r["stargazers_count"])
@@ -145,6 +148,12 @@ def fetch_rest(user, token, transport, work_limit):
 
 
 def fetch_activity(user, token, transport, *, work_limit):
+    """The profile's Activity, merged from three sources, each of which may fail:
+    GraphQL when there is a token, else (or when it fails) the REST API, for the repository numbers;
+    then the public calendar, whose days and total replace GraphQL's because they match the profile page.
+
+    transport(url, token=None, payload=None, accept=...) -> response text; `http` in production.
+    work_limit caps the selected work, which never includes the profile repository itself."""
     activity = {}
     if token:
         try:
