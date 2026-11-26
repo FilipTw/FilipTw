@@ -53,3 +53,22 @@ def test_readme_alt_text_matches_each_svg_title(files):
         for theme in build.THEMES:
             title = re.search(r"<title>([^<]*)</title>", files[f"assets/{stem}-{theme}.svg"]).group(1)
             assert alt == title, f"{stem}: README says {alt!r}, SVG says {title!r}"
+
+
+def test_main_keeps_the_previous_artwork_when_ci_gets_incomplete_activity(monkeypatch, tmp_path):
+    monkeypatch.setattr(build, "ROOT", tmp_path)
+    monkeypatch.setattr(build, "fetch_activity", lambda user: {"repos": 3})
+    monkeypatch.setenv("CI", "true")
+    with pytest.raises(SystemExit):
+        build.main()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_main_links_the_readme_to_head_outside_github_actions(monkeypatch, tmp_path):
+    activity = json.loads((HERE / "fixtures" / "activity.json").read_text())
+    monkeypatch.setattr(build, "ROOT", tmp_path)
+    monkeypatch.setattr(build, "fetch_activity", lambda user: activity)
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
+    build.main()
+    assert f"/{build.CONFIG['username']}/HEAD/assets/hero-light.svg" in (tmp_path / "README.md").read_text()

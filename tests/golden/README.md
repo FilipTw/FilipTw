@@ -17,7 +17,7 @@
 <br /><br />
 
 <a href="https://github.com/example/contour-lab"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-dark.svg?v=9337a027" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-light.svg?v=9337a027" width="100%" alt="contour-lab. Interactive loss-surface explorer for teaching optimisation." /></picture></a>
-<a href="https://github.com/example/tiny-agent"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-dark.svg?v=5dccac40" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-light.svg?v=5dccac40" width="100%" alt="tiny-agent. " /></picture></a>
+<a href="https://github.com/example/tiny-agent"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-dark.svg?v=02d65d9b" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-light.svg?v=02d65d9b" width="100%" alt="tiny-agent" /></picture></a>
 
 <br /><br />
 

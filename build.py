@@ -2,7 +2,7 @@
 """
 Artwork generator for the FilipTw GitHub profile.
 
-    pip install fonttools uharfbuzz brotli numpy contourpy
+    pip install -r requirements.txt
     python build.py
 
 Writes light and dark SVGs into assets/. Text is converted to outlines because
@@ -22,8 +22,8 @@ import os
 import re
 import tarfile
 import urllib.request
-from dataclasses import dataclass
-from enum import Enum
+from dataclasses import dataclass, replace
+from enum import Enum, auto
 from functools import partial
 from pathlib import Path
 from typing import Callable, Optional
@@ -71,7 +71,7 @@ CONFIG = {
         ("LinkedIn", "linkedin.com/in/FilipTw", "https://www.linkedin.com/"),
         ("GitHub", "github.com/FilipTw/repositories", "https://github.com/FilipTw?tab=repositories"),
     ],
-    # Selected work shows your pinned repositories (or the most starred ones).
+    # Selected work: the pinned repositories, else the most starred ones.
     "work_limit": 4,
 }
 
@@ -668,22 +668,22 @@ def fetch_rest(user, token=None):
 
 def fetch_activity(user):
     token = os.environ.get("GITHUB_TOKEN")
-    data = {}
+    activity = {}
     if token:
         try:
-            data = fetch_graphql(user, token)
+            activity = fetch_graphql(user, token)
         except Exception as exc:
             print(f"  GraphQL failed ({exc}); falling back to the REST API")
-    if not data:
+    if not activity:
         try:
-            data = fetch_rest(user, token)
+            activity = fetch_rest(user, token)
         except Exception as exc:  # unauthenticated rate limits are common
             print(f"  REST API unavailable ({exc}); repository numbers left blank")
     try:
-        data.update(fetch_calendar(user))
+        activity.update(fetch_calendar(user))
     except Exception as exc:
         print(f"  public calendar unavailable ({exc})")
-    return data
+    return activity
 
 
 def fmt_count(v):
@@ -691,15 +691,15 @@ def fmt_count(v):
     return f"{v:,}" if isinstance(v, int) else "\u2013"
 
 
-def build_activity(F, t, alt, data, today):
+def build_activity(F, t, alt, activity, today):
     c = Canvas()
     body = section_head(c, F, t, "Activity")
 
     # metrics
-    metrics = [("Contributions this year", data.get("contributions")),
-               ("Public repositories", data.get("repos")),
-               ("Stars earned", data.get("stars")),
-               ("Followers", data.get("followers"))]
+    metrics = [("Contributions this year", activity.get("contributions")),
+               ("Public repositories", activity.get("repos")),
+               ("Stars earned", activity.get("stars")),
+               ("Followers", activity.get("followers"))]
     colw = (W - COL) / 4
     num_base = 46 - 0.729 * 17 + 0.729 * 60
     for j, (label, value) in enumerate(metrics):
@@ -708,7 +708,7 @@ def build_activity(F, t, alt, data, today):
         body.append(c.text(F["text"], label, x, num_base + 36, 16, t["muted"]))
 
     # contribution calendar: full width, like the hero, so the cells stay legible
-    days = data.get("days", [])[-371:]
+    days = activity.get("days", [])[-371:]
     y_cal = num_base + 112
     weeks = []
     for date, count, level in days:
@@ -745,7 +745,7 @@ def build_activity(F, t, alt, data, today):
     body.append(c.text(F["text"], f"Updated {today.day} {today:%B %Y}", 0, y_leg, 14, t["muted"]))
 
     # languages
-    langs = sorted(data.get("languages", {}).items(), key=lambda kv: -kv[1])
+    langs = sorted(activity.get("languages", {}).items(), key=lambda kv: -kv[1])
     y = y_leg + 24
     if langs:
         y = y_leg + 78
@@ -785,9 +785,9 @@ def build_activity(F, t, alt, data, today):
 # ════════════════════════════════════════════════════════════════════════════
 class Gap(Enum):
     """Space the README leaves after a Section."""
-    SECTION = "section"   # a visible break before the next Section
-    END = "end"           # one blank line, so the next picture starts a new paragraph
-    NONE = None           # the next picture follows directly (rows of one group)
+    SECTION = auto()   # a visible break before the next Section
+    END = auto()       # one blank line, so the next picture starts a new paragraph
+    NONE = auto()      # the next picture follows directly (rows of one group)
 
 
 @dataclass(frozen=True)
@@ -795,39 +795,42 @@ class Section:
     """One strip of the profile: a light and a dark SVG, and one picture in the README."""
     stem: str
     alt: str
-    draw: Callable[[dict, str], str]   # (Theme, alt) -> SVG
+    draw: Callable[[dict, dict, str], str]   # (fonts, Theme, alt) -> SVG
     link: Optional[str] = None
     gap: Gap = Gap.NONE
 
 
-def sections(activity, today, F):
+def row_group(rows):
+    """Rows of one group follow each other directly; the last one ends the group with a Section break."""
+    return rows[:-1] + [replace(rows[-1], gap=Gap.SECTION)] if rows else rows
+
+
+def work_alt(repo):
+    return f'{repo["name"]}. {repo["description"]}' if repo.get("description") else repo["name"]
+
+
+def sections(activity, today):
     """Every Section of the profile, in README order."""
     work = activity.get("work", [])
     links = CONFIG["links"]
-    out = [
-        Section("hero", f'{CONFIG["name"]}, {CONFIG["role"]}. {CONFIG["tagline"]}',
-                partial(build_hero, F), gap=Gap.SECTION),
-        Section("about", "About. " + CONFIG["about"], partial(build_about, F), gap=Gap.SECTION),
+    return [
+        Section("hero", f'{CONFIG["name"]}, {CONFIG["role"]}. {CONFIG["tagline"]}', build_hero, gap=Gap.SECTION),
+        Section("about", "About. " + CONFIG["about"], build_about, gap=Gap.SECTION),
         Section("stack", "Stack. " + ". ".join(f"{g}: {', '.join(i)}" for g, i in CONFIG["stack"]),
-                partial(build_stack, F), gap=Gap.SECTION),
-    ]
-    for i, repo in enumerate(work):
-        last = i == len(work) - 1
-        out.append(Section(f"work-{i + 1}", f'{repo["name"]}. {repo.get("description") or ""}',
-                           partial(build_work_row, F, repo=repo, head=i == 0, last=last),
-                           link=repo["url"], gap=Gap.SECTION if last else Gap.NONE))
-    out += [
+                build_stack, gap=Gap.SECTION),
+        *row_group([Section(f"work-{i + 1}", work_alt(repo),
+                            partial(build_work_row, repo=repo, head=i == 0, last=i == len(work) - 1),
+                            link=repo["url"])
+                    for i, repo in enumerate(work)]),
         Section("activity", f'Activity. {fmt_count(activity.get("contributions"))} contributions in the last year.',
-                partial(build_activity, F, data=activity, today=today), gap=Gap.SECTION),
-        Section("contact", CONFIG["contact_line"], partial(build_contact, F), gap=Gap.END),
+                partial(build_activity, activity=activity, today=today), gap=Gap.SECTION),
+        Section("contact", CONFIG["contact_line"], build_contact, gap=Gap.END),
+        *row_group([Section(f"link-{label.lower()}", f"{label}: {value}",
+                            partial(build_link_row, label=label, value=value, last=i == len(links) - 1),
+                            link=url)
+                    for i, (label, value, url) in enumerate(links)]),
+        Section("colophon", f'{CONFIG["name"]}, {today.year}', partial(build_colophon, today=today)),
     ]
-    for i, (label, value, url) in enumerate(links):
-        last = i == len(links) - 1
-        out.append(Section(f"link-{label.lower()}", f"{label}: {value}",
-                           partial(build_link_row, F, label=label, value=value, last=last),
-                           link=url, gap=Gap.SECTION if last else Gap.NONE))
-    out.append(Section("colophon", f'{CONFIG["name"]}, {today.year}', partial(build_colophon, F, today=today)))
-    return out
 
 
 def render_readme(svgs, branch):
@@ -855,7 +858,7 @@ def render_readme(svgs, branch):
 
 def build_profile(activity, today, F, branch):
     """Every generated file, as {path relative to the repo root: text}. Pure: nothing is read or written."""
-    svgs = [(s, {name: s.draw(t, s.alt) for name, t in THEMES.items()}) for s in sections(activity, today, F)]
+    svgs = [(s, {name: s.draw(F, t, s.alt) for name, t in THEMES.items()}) for s in sections(activity, today)]
     files = {f"{ASSETS}/{s.stem}-{name}.svg": svg for s, by_theme in svgs for name, svg in by_theme.items()}
     files["README.md"] = render_readme(svgs, branch)
     return files
