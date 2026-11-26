@@ -1,0 +1,31 @@
+{
+  "data": {
+    "user": {
+      "followers": {"totalCount": 12},
+      "pinnedItems": {"nodes": [
+        {"name": "FilipTw", "description": "Profile artwork", "url": "https://github.com/FilipTw/FilipTw",
+         "stargazerCount": 1, "primaryLanguage": {"name": "Python"}},
+        {"name": "tiny-agent", "description": null, "url": "https://github.com/FilipTw/tiny-agent",
+         "stargazerCount": 0, "primaryLanguage": null}
+      ]},
+      "repositories": {"totalCount": 3, "nodes": [
+        {"name": "contour-lab", "description": "Loss landscapes as contour maps.", "url": "https://github.com/FilipTw/contour-lab",
+         "stargazerCount": 5, "primaryLanguage": {"name": "Python"},
+         "languages": {"edges": [{"size": 3000, "node": {"name": "Python"}}, {"size": 200, "node": {"name": "Shell"}}]}},
+        {"name": "FilipTw", "description": "Profile artwork", "url": "https://github.com/FilipTw/FilipTw",
+         "stargazerCount": 1, "primaryLanguage": {"name": "Python"},
+         "languages": {"edges": [{"size": 500, "node": {"name": "Python"}}]}},
+        {"name": "tiny-agent", "description": null, "url": "https://github.com/FilipTw/tiny-agent",
+         "stargazerCount": 0, "primaryLanguage": null,
+         "languages": {"edges": []}}
+      ]},
+      "contributionsCollection": {"contributionCalendar": {
+        "totalContributions": 3,
+        "weeks": [{"contributionDays": [
+          {"date": "2026-06-14", "contributionCount": 1, "contributionLevel": "FIRST_QUARTILE"},
+          {"date": "2026-06-15", "contributionCount": 2, "contributionLevel": "SECOND_QUARTILE"}
+        ]}]
+      }}
+    }
+  }
+}

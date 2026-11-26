@@ -604,9 +604,9 @@ def pick_work(repos, user):
     return repos[: CONFIG["work_limit"]]
 
 
-def fetch_graphql(user, token):
-    res = json.loads(http("https://api.github.com/graphql", token,
-                          {"query": QUERY, "variables": {"login": user}}))
+def fetch_graphql(user, token, transport):
+    res = json.loads(transport("https://api.github.com/graphql", token,
+                               {"query": QUERY, "variables": {"login": user}}))
     if res.get("errors"):
         raise RuntimeError(res["errors"][0].get("message"))
     u = res["data"]["user"]
@@ -634,9 +634,9 @@ def fetch_graphql(user, token):
     }
 
 
-def fetch_calendar(user):
+def fetch_calendar(user, transport):
     """The public contribution calendar: the same numbers the profile page shows."""
-    page = http(f"https://github.com/users/{user}/contributions", accept="text/html")
+    page = transport(f"https://github.com/users/{user}/contributions", accept="text/html")
     cells = re.findall(r'data-date="(\d{4}-\d\d-\d\d)" id="([\w-]+)" data-level="(\d)"', page)
     if not cells:
         raise RuntimeError("no calendar cells on the page")
@@ -649,10 +649,10 @@ def fetch_calendar(user):
     return {"days": days, "contributions": sum(d[1] for d in days)}
 
 
-def fetch_rest(user, token=None):
+def fetch_rest(user, token, transport):
     """Fallback for the repository numbers when GraphQL is unavailable."""
-    profile = json.loads(http(f"https://api.github.com/users/{user}", token))
-    repos = json.loads(http(f"https://api.github.com/users/{user}/repos?per_page=100&type=owner", token))
+    profile = json.loads(transport(f"https://api.github.com/users/{user}", token))
+    repos = json.loads(transport(f"https://api.github.com/users/{user}/repos?per_page=100&type=owner", token))
     own = sorted((r for r in repos if not r["fork"]), key=lambda r: -r["stargazers_count"])
     langs = {}
     for r in own:
@@ -666,21 +666,20 @@ def fetch_rest(user, token=None):
     }
 
 
-def fetch_activity(user):
-    token = os.environ.get("GITHUB_TOKEN")
+def fetch_activity(user, token, transport):
     activity = {}
     if token:
         try:
-            activity = fetch_graphql(user, token)
+            activity = fetch_graphql(user, token, transport)
         except Exception as exc:
             print(f"  GraphQL failed ({exc}); falling back to the REST API")
     if not activity:
         try:
-            activity = fetch_rest(user, token)
+            activity = fetch_rest(user, token, transport)
         except Exception as exc:  # unauthenticated rate limits are common
             print(f"  REST API unavailable ({exc}); repository numbers left blank")
     try:
-        activity.update(fetch_calendar(user))
+        activity.update(fetch_calendar(user, transport))
     except Exception as exc:
         print(f"  public calendar unavailable ({exc})")
     return activity
@@ -880,7 +879,7 @@ def write_profile(files, root):
 def main():
     F = fonts()
     print("  fetching activity")
-    activity = fetch_activity(CONFIG["username"])
+    activity = fetch_activity(CONFIG["username"], os.environ.get("GITHUB_TOKEN"), http)
     if os.environ.get("CI") and not ("days" in activity and "repos" in activity):
         raise SystemExit("  incomplete data from GitHub; keeping the previous artwork")
     branch = os.environ.get("GITHUB_REF_NAME") or "HEAD"

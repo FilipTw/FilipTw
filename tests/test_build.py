@@ -57,7 +57,7 @@ def test_readme_alt_text_matches_each_svg_title(files):
 
 def test_main_keeps_the_previous_artwork_when_ci_gets_incomplete_activity(monkeypatch, tmp_path):
     monkeypatch.setattr(build, "ROOT", tmp_path)
-    monkeypatch.setattr(build, "fetch_activity", lambda user: {"repos": 3})
+    monkeypatch.setattr(build, "fetch_activity", lambda *args: {"repos": 3})
     monkeypatch.setenv("CI", "true")
     with pytest.raises(SystemExit):
         build.main()
@@ -67,7 +67,7 @@ def test_main_keeps_the_previous_artwork_when_ci_gets_incomplete_activity(monkey
 def test_main_links_the_readme_to_head_outside_github_actions(monkeypatch, tmp_path):
     activity = json.loads((HERE / "fixtures" / "activity.json").read_text())
     monkeypatch.setattr(build, "ROOT", tmp_path)
-    monkeypatch.setattr(build, "fetch_activity", lambda user: activity)
+    monkeypatch.setattr(build, "fetch_activity", lambda *args: activity)
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("GITHUB_REF_NAME", raising=False)
     build.main()
