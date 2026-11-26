@@ -14,4 +14,5 @@ fix:  ## apply ruff's safe fixes and formatting
 
 check-linux:  ## the same checks in CI's Python on Linux, which catches platform-dependent SVG output
 	docker run --rm -v "$(CURDIR)":/src:ro python:3.12-slim sh -c \
-	  'cp -r /src /w && cd /w && rm -rf .venv && pip install -q -r requirements-dev.txt >/dev/null 2>&1 && make check PY=python'
+	  'cp -r /src /w && cd /w && rm -rf .venv && pip install -q -r requirements-dev.txt >/dev/null 2>&1 && \
+	   ruff check . && ruff format --check . && mypy && python -m pytest -q tests'

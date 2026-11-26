@@ -8,9 +8,10 @@ on:
     branches:
       - main
     paths:
-      - build.py
-      - activity.py
+      - "*.py"
       - requirements*.txt
+      - pyproject.toml
+      - Makefile
       - tests/**
       - .github/workflows/profile.yml
 
@@ -44,8 +45,8 @@ jobs:
           key: fonts-${{ hashFiles('build.py') }}
           restore-keys: fonts-
 
-      - name: Test # a failing snapshot stops the daily artwork commit
-        run: python -m pytest -q tests
+      - name: Check # lint, types and tests; a failure stops the daily artwork commit
+        run: make check PY=python
 
       - name: Build artwork and README
         run: python build.py
