@@ -104,12 +104,15 @@ def build_about(F: Fonts, t: Theme, alt: str) -> str:
     y += (len(lines) - 1) * leading + facts_gap
     facts = CONFIG["facts"]
     measure = (W - COL) / len(facts) - 40
+    max_lines = 2  # the height leaves room for this many lines per fact; more would be cut off
     for (label, value), x in zip(facts, c.columns(len(facts)), strict=True):
         body.append(c.text(label, x, y, LABEL))
-        for k, line in enumerate(c.wrap(value, fact, measure)):
+        wrapped = c.wrap(value, fact, measure)
+        if len(wrapped) > max_lines:
+            raise ValueError(f"the {label!r} fact wraps to {len(wrapped)} lines; shorten it to {max_lines}")
+        for k, line in enumerate(wrapped):
             body.append(c.text(line, x, y + label_to_fact + k * fact_leading, fact))
-    # the height leaves room for two lines per fact; a fact that wraps to three would be cut off
-    return c.render(int(y + label_to_fact + fact_leading * 2 + bottom), "".join(body), alt)
+    return c.render(int(y + label_to_fact + fact_leading * max_lines + bottom), "".join(body), alt)
 
 
 def build_stack(F: Fonts, t: Theme, alt: str) -> str:
