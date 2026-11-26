@@ -88,3 +88,10 @@ def test_when_the_rest_api_fails_too_only_the_calendar_is_known():
 
 def test_when_the_calendar_fails_the_graphql_days_stay():
     assert fetch("token", fake_github(calendar=offline)) == Activity(**FROM_GRAPHQL)
+
+
+def test_a_programming_error_is_not_mistaken_for_github_being_down():
+    def bug(url):
+        raise TypeError("unsupported operand")
+    with pytest.raises(TypeError):
+        fetch("token", fake_github(graphql=bug))

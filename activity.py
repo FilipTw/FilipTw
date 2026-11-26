@@ -23,6 +23,14 @@ class Activity:
         return self.days is not None and self.repos is not None
 
 
+class ActivityUnavailable(Exception):
+    """GitHub answered, but not with the numbers asked for."""
+
+
+# What a failing source looks like: network or HTTP errors, a body that is not JSON,
+# a response missing a field, or ActivityUnavailable. Anything else is a bug and propagates.
+UNAVAILABLE = (OSError, ValueError, LookupError, ActivityUnavailable)
+
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 REPO_FIELDS = "name description url stargazerCount primaryLanguage{name}"
 QUERY = """query($login:String!){user(login:$login){
@@ -53,7 +61,7 @@ def fetch_graphql(user, token, transport, work_limit):
     res = json.loads(transport("https://api.github.com/graphql", token,
                                {"query": QUERY, "variables": {"login": user}}))
     if res.get("errors"):
-        raise RuntimeError(res["errors"][0].get("message"))
+        raise ActivityUnavailable(res["errors"][0].get("message"))
     u = res["data"]["user"]
 
     def repo(n):
@@ -84,7 +92,7 @@ def fetch_calendar(user, transport):
     page = transport(f"https://github.com/users/{user}/contributions", accept="text/html")
     cells = re.findall(r'data-date="(\d{4}-\d\d-\d\d)" id="([\w-]+)" data-level="(\d)"', page)
     if not cells:
-        raise RuntimeError("no calendar cells on the page")
+        raise ActivityUnavailable("no calendar cells on the page")
     tips = dict(re.findall(r'for="([\w-]+)"[^>]*>([^<]*)</tool-tip>', page))
     days = []
     for date, cid, level in cells:
@@ -117,15 +125,15 @@ def fetch_activity(user, token, transport, *, work_limit):
     if token:
         try:
             activity = fetch_graphql(user, token, transport, work_limit)
-        except Exception as exc:
+        except UNAVAILABLE as exc:
             print(f"  GraphQL failed ({exc}); falling back to the REST API")
     if not activity:
         try:
             activity = fetch_rest(user, token, transport, work_limit)
-        except Exception as exc:  # unauthenticated rate limits are common
+        except UNAVAILABLE as exc:  # unauthenticated rate limits are common
             print(f"  REST API unavailable ({exc}); repository numbers left blank")
     try:
         activity.update(fetch_calendar(user, transport))
-    except Exception as exc:
+    except UNAVAILABLE as exc:
         print(f"  public calendar unavailable ({exc})")
     return Activity(**activity)
