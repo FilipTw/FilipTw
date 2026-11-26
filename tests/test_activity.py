@@ -1,4 +1,5 @@
 """fetch_activity merges GitHub's sources; a fake transport answers from tests/fixtures/github/."""
+import re
 import urllib.error
 from pathlib import Path
 
@@ -95,3 +96,10 @@ def test_a_programming_error_is_not_mistaken_for_github_being_down():
         raise TypeError("unsupported operand")
     with pytest.raises(TypeError):
         fetch("token", fake_github(graphql=bug))
+
+
+def test_the_calendar_does_not_depend_on_the_order_of_html_attributes():
+    page = (FIXTURES / "contributions.html").read_text()
+    reordered = re.sub(r'(data-date="[^"]*") (id="[^"]*") (data-level="[^"]*")', r"\3 \2 \1", page)
+    assert reordered != page
+    assert fetch("token", fake_github(calendar=reordered)) == Activity(**{**FROM_GRAPHQL, **FROM_CALENDAR})

@@ -3,6 +3,7 @@ import json
 import re
 import urllib.request
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from typing import Optional
 
 
@@ -89,17 +90,40 @@ def fetch_graphql(user, token, transport, work_limit):
 
 def fetch_calendar(user, transport):
     """The public contribution calendar: the same numbers the profile page shows."""
-    page = transport(f"https://github.com/users/{user}/contributions", accept="text/html")
-    cells = re.findall(r'data-date="(\d{4}-\d\d-\d\d)" id="([\w-]+)" data-level="(\d)"', page)
-    if not cells:
+    page = CalendarPage()
+    page.feed(transport(f"https://github.com/users/{user}/contributions", accept="text/html"))
+    if not page.cells:
         raise ActivityUnavailable("no calendar cells on the page")
-    tips = dict(re.findall(r'for="([\w-]+)"[^>]*>([^<]*)</tool-tip>', page))
     days = []
-    for date, cid, level in cells:
-        m = re.match(r"([\d,]+) contribution", tips.get(cid, ""))
+    for date, cid, level in page.cells:
+        m = re.match(r"([\d,]+) contribution", page.tips.get(cid, ""))  # "No contributions on …" counts 0
         days.append((date, int(m.group(1).replace(",", "")) if m else 0, int(level)))
     days.sort()
     return {"days": days, "contributions": sum(d[1] for d in days)}
+
+
+class CalendarPage(HTMLParser):
+    """Day cells (<td data-date data-level id>) and the <tool-tip for=id> text that holds each count."""
+
+    def __init__(self):
+        super().__init__()
+        self.cells, self.tips, self._tip = [], {}, None
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "td" and "data-date" in a and "data-level" in a:
+            self.cells.append((a["data-date"], a.get("id"), a["data-level"]))
+        elif tag == "tool-tip" and "for" in a:
+            self._tip = a["for"]
+            self.tips[self._tip] = ""
+
+    def handle_data(self, data):
+        if self._tip:
+            self.tips[self._tip] += data
+
+    def handle_endtag(self, tag):
+        if tag == "tool-tip":
+            self._tip = None
 
 
 def fetch_rest(user, token, transport, work_limit):
