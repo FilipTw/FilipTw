@@ -380,7 +380,8 @@ def build_hero(F, t, alt):
     curve, ctimes = smooth(pts, times)
     seg = np.hypot(*np.diff(curve, axis=0).T)
     cum = np.concatenate([[0], np.cumsum(seg)]) / seg.sum()
-    trail_kf = "".join(f"{(ti - t0) / dur * 100:.2f}%{{stroke-dashoffset:{1 - ci:.4f}}}"
+    # max(): the last offset is 1 - 1.0000000000000002 on some platforms, which would print as -0.0000
+    trail_kf = "".join(f"{(ti - t0) / dur * 100:.2f}%{{stroke-dashoffset:{max(1 - ci, 0.0):.4f}}}"
                        for ti, ci in zip(ctimes, cum))
     move_kf = "".join(f"{(ti - t0) / dur * 100:.2f}%{{transform:translate({x:.1f}px,{y:.1f}px)}}"
                       for ti, (x, y) in zip(ctimes, curve))

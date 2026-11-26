@@ -4,7 +4,7 @@
   to build.py and once a day for the live Activity numbers.
 -->
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-dark.svg?v=890f06e9" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-light.svg?v=890f06e9" width="100%" alt="Filip, Full-stack &amp; AI developer. I build backends, train models and ship the interfaces in between." /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-dark.svg?v=dcf3b889" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/hero-light.svg?v=dcf3b889" width="100%" alt="Filip, Full-stack &amp; AI developer. I build backends, train models and ship the interfaces in between." /></picture>
 
 <br /><br />
 
