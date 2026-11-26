@@ -158,7 +158,7 @@ THEMES: dict[str, Theme] = {
     ),
 }
 
-W = 1200  # every asset shares this width, so edges align in the README
+W = 1200  # every SVG shares this width, so edges align in the README
 COL = 300  # the Grid: the label column ends and the content column starts here
 ROOT = Path(__file__).resolve().parent
 FONT_DIR = ROOT / ".fonts"
@@ -373,7 +373,7 @@ def loss(x: npt.ArrayLike, y: npt.ArrayLike) -> Points:
     return f
 
 
-@cache  # pure and Theme-independent: both Themes share one result
+@cache
 def descent(
     start: tuple[float, float] = (110.0, 128.0),
     lr: float = 2500.0,
@@ -445,7 +445,7 @@ def inside(poly: Points, pt: tuple[float, float]) -> bool:
     return hit
 
 
-@cache  # pure and Theme-independent: both Themes share one result
+@cache  # both Themes share the result, as with descent: read it, never mutate it
 def contour_lines(
     levels: int = 34, res: float = 3.0, pad: int = 40
 ) -> tuple[list[tuple[int, Points, bool]], float]:

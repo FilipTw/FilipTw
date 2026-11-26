@@ -4,6 +4,8 @@ import datetime as dt
 import json
 import re
 import shutil
+import typing
+from dataclasses import fields
 from pathlib import Path
 
 import pytest
@@ -90,3 +92,7 @@ def test_mona_sans_cap_height_matches_the_grid_it_was_designed_with():
     fonts = build.fonts()
     for role in ("display", "text", "medium"):
         assert fonts[role].cap_height == 0.729
+
+
+def test_every_colour_role_is_a_theme_field():
+    assert typing.get_args(build.Role) == tuple(f.name for f in fields(build.Theme))
