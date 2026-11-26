@@ -16,12 +16,12 @@
 
 <br /><br />
 
-<a href="https://github.com/FilipTw/python-path"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-dark.svg?v=9802f232" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-light.svg?v=9802f232" width="100%" alt="python-path: " /></picture></a>
-<a href="https://github.com/FilipTw/AI_Projects_In_Polish"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-dark.svg?v=bd5a66ee" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-light.svg?v=bd5a66ee" width="100%" alt="AI_Projects_In_Polish: Some simple projects from AI issues in translation into Polish." /></picture></a>
+<a href="https://github.com/FilipTw/python-path"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-dark.svg?v=e47e45ba" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-1-light.svg?v=e47e45ba" width="100%" alt="python-path" /></picture></a>
+<a href="https://github.com/FilipTw/AI_Projects_In_Polish"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-dark.svg?v=bd5a66ee" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/work-2-light.svg?v=bd5a66ee" width="100%" alt="AI_Projects_In_Polish. Some simple projects from AI issues in translation into Polish." /></picture></a>
 
 <br /><br />
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=2143d672" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=2143d672" width="100%" alt="Activity: 615 contributions in the last year" /></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-dark.svg?v=266667d0" /><img src="https://raw.githubusercontent.com/FilipTw/FilipTw/main/assets/activity-light.svg?v=266667d0" width="100%" alt="Activity. 650 contributions in the last year." /></picture>
 
 <br /><br />
 
