@@ -9,7 +9,8 @@ on:
       - main
     paths:
       - build.py
-      - requirements.txt
+      - requirements*.txt
+      - tests/**
       - .github/workflows/profile.yml
 
 permissions:
@@ -33,7 +34,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Cache fonts
         uses: actions/cache@v4
@@ -41,6 +42,9 @@ jobs:
           path: .fonts
           key: fonts-${{ hashFiles('build.py') }}
           restore-keys: fonts-
+
+      - name: Test # a failing snapshot stops the daily artwork commit
+        run: python -m pytest -q tests
 
       - name: Build artwork and README
         run: python build.py
