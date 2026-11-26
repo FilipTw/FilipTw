@@ -196,7 +196,7 @@ Fonts = dict[str, Font]  # role (display, text, mono, ...) -> Font
 
 @dataclass(frozen=True)
 class Type:
-    """How a run of text is set: a font role, a size in px, a Theme colour, and tracking in ems."""
+    """Size in px; tracking in ems, as in CSS letter-spacing."""
 
     font: str
     size: float
@@ -205,7 +205,8 @@ class Type:
 
 
 Glyph = tuple[str, float, float, float]  # (outline id, x, y, scale)
-LABEL = Type("text", 17, "muted")  # the Grid's Label, also the hero caption
+LABEL = Type("text", 17, "muted")
+NOTE = Type("text", 16, "muted")  # a step below a Label: the colophon, the names under the metrics
 LABEL_BASELINE = 46  # a Section's Label sits on this baseline, below the opening Rule
 
 
@@ -224,18 +225,18 @@ class Canvas:
             self.defs[key] = font.outline(glyph)
         return key
 
-    def measure(self, text: str, style: Type) -> float:
-        font, size = self.F[style.font], style.size
+    def measure(self, text: str, setting: Type) -> float:
+        font, size = self.F[setting.font], setting.size
         run = font.shape(text)
-        return sum(r[1] for r in run) * size / font.upem + style.tracking * size * max(len(run) - 1, 0)
+        return sum(r[1] for r in run) * size / font.upem + setting.tracking * size * max(len(run) - 1, 0)
 
     def glyphs(
-        self, text: str, x: float, y: float, style: Type, *, anchor: str = "start", optical: bool = False
+        self, text: str, x: float, y: float, setting: Type, *, anchor: str = "start", optical: bool = False
     ) -> list[Glyph]:
-        font, size = self.F[style.font], style.size
+        font, size = self.F[setting.font], setting.size
         s = size / font.upem
         if anchor != "start":
-            w = self.measure(text, style)
+            w = self.measure(text, setting)
             x -= w if anchor == "end" else w / 2
         if optical:
             x -= font.lsb(text) * s
@@ -244,7 +245,7 @@ class Canvas:
             key = self.gid(font, glyph)
             if self.defs[key]:
                 out.append((key, pen + dx * s, y - dy * s, s))
-            pen += adv * s + style.tracking * size
+            pen += adv * s + setting.tracking * size
         return out
 
     @staticmethod
@@ -256,44 +257,44 @@ class Canvas:
         text: str,
         x: float,
         y: float,
-        style: Type,
+        setting: Type,
         *,
         anchor: str = "start",
         optical: bool = False,
         attrs: str = "",
     ) -> str:
-        inner = "".join(self.use(*g) for g in self.glyphs(text, x, y, style, anchor=anchor, optical=optical))
-        return f'<g fill="{self.t[style.colour]}"{attrs}>{inner}</g>'
+        run = self.glyphs(text, x, y, setting, anchor=anchor, optical=optical)
+        inner = "".join(self.use(*g) for g in run)
+        return f'<g fill="{self.t[setting.colour]}"{attrs}>{inner}</g>'
 
-    def wrap(self, text: str, style: Type, width: float) -> list[str]:
+    def wrap(self, text: str, setting: Type, width: float) -> list[str]:
         lines, line = [], ""
         for word in text.split():
             trial = f"{line} {word}".strip()
-            if line and self.measure(trial, style) > width:
+            if line and self.measure(trial, setting) > width:
                 lines.append(line)
                 line = word
             else:
                 line = trial
         return lines + [line] if line else lines
 
-    def wrap_balanced(self, text: str, style: Type, width: float) -> list[str]:
+    def wrap_balanced(self, text: str, setting: Type, width: float) -> list[str]:
         """Wrap, then narrow the measure until the last line is not a lone word."""
-        lines, w = self.wrap(text, style, width), width
+        lines, w = self.wrap(text, setting, width), width
         while len(lines) > 1 and len(lines[-1].split()) < 2 and w > width * 0.75:
             w -= 8
-            lines = self.wrap(text, style, w)
+            lines = self.wrap(text, setting, w)
         return lines
 
-    def fit(self, text: str, style: Type, width: float) -> str:
+    def fit(self, text: str, setting: Type, width: float) -> str:
         """The text, cut short with an ellipsis if it is wider than width."""
-        if self.measure(text, style) <= width:
+        if self.measure(text, setting) <= width:
             return text
-        while text and self.measure(text + "\u2026", style) > width:
+        while text and self.measure(text + "\u2026", setting) > width:
             text = text[:-1]
         return text.rstrip(" ,.;:") + "\u2026"
 
     def rule(self, y: int = 0, span: Literal["full", "content"] = "full") -> str:
-        """A Rule across the full width, or across the content column only."""
         x = 0 if span == "full" else COL
         return f'<rect x="{x}" y="{y}" width="{W - x}" height="1" fill="{self.t["line"]}"/>'
 
@@ -307,10 +308,10 @@ class Canvas:
         width = (W - COL) / n
         return [COL + j * width for j in range(n)]
 
-    def first_baseline(self, style: Type) -> float:
+    def first_baseline(self, setting: Type) -> float:
         """The baseline that puts the cap height of a first line level with the Label's."""
         label = self.F[LABEL.font].cap_height * LABEL.size
-        return LABEL_BASELINE - label + self.F[style.font].cap_height * style.size
+        return LABEL_BASELINE - label + self.F[setting.font].cap_height * setting.size
 
     def render(self, height: int, body: str, label: str) -> str:
         defs = "".join(f'<path id="{k}" d="{d}"/>' for k, d in self.defs.items() if d)
@@ -536,7 +537,9 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     )
 
     # ── top row: caption + live readout ────────────────────────────────────
-    body.append(c.text(CONFIG["hero_caption"], 0, 38, LABEL, attrs=' class="fd" style="animation-delay:.2s"'))
+    top_row = 38
+    fade_in = ' class="fd" style="animation-delay:.2s"'
+    body.append(c.text(CONFIG["hero_caption"], 0, top_row, LABEL, attrs=fade_in))
     reading, reading_value = Type("mono", 16, "muted"), Type("mono", 16, "ink")
     adv = c.measure("0", reading)
     loss_scale = 2.4 / (loss(*pts[0]) - zmin)
@@ -545,16 +548,16 @@ def build_hero(F: Fonts, t: Theme, alt: str) -> str:
     x_ep_val = x_loss_lab - adv * 6.5
     x_ep_lab = x_ep_val - adv * 6.2
     readout = [
-        c.text("epoch", x_ep_lab, 38, reading),
-        c.text("loss", x_loss_lab, 38, reading),
+        c.text("epoch", x_ep_lab, top_row, reading),
+        c.text("loss", x_loss_lab, top_row, reading),
     ]
     frames = list(range(0, n, 2))
     if frames[-1] != n - 1:
         frames.append(n - 1)
     for j, i in enumerate(frames):
         value = (loss(*pts[i]) - zmin) * loss_scale + 0.0021
-        group = c.text(f"{i:03d}", x_ep_val, 38, reading_value) + c.text(
-            f"{value:.4f}", x_loss_val, 38, reading_value
+        group = c.text(f"{i:03d}", x_ep_val, top_row, reading_value) + c.text(
+            f"{value:.4f}", x_loss_val, top_row, reading_value
         )
         if j == len(frames) - 1:
             style = f"animation:off {times[i]:.3f}s step-end"
@@ -667,10 +670,11 @@ def build_contact(F: Fonts, t: Theme, alt: str) -> str:
 def build_link_row(F: Fonts, t: Theme, alt: str, label: str, value: str, last: bool = False) -> str:
     c = Canvas(F, t)
     H = 78
+    label_y, value_x, value_y = 47, COL + 300, 48
     body = [
         c.rule(span="content"),
-        c.text(label, COL, 47, LABEL),
-        c.text(value, COL + 300, 48, Type("text", 24, "accent", -0.01)),
+        c.text(label, COL, label_y, LABEL),
+        c.text(value, value_x, value_y, Type("text", 24, "accent", -0.01)),
     ]
     if last:
         body.append(c.rule(H - 1, span="content"))
@@ -681,14 +685,16 @@ def build_work_row(F: Fonts, t: Theme, alt: str, repo: Repo, head: bool = False,
     c = Canvas(F, t)
     H = 112
     body = c.head("Selected work") if head else [c.rule(span="content")]
-    note, description = Type("mono", 15, "muted"), Type("text", 18, "muted")
-    body.append(c.text(repo["name"], COL, 56, Type("display", 34, "ink", -0.02), optical=True))
-    desc = c.fit(repo["description"] or "No description yet", description, width=620)
-    body.append(c.text(desc, COL, 90, description))
+    mono, description = Type("mono", 15, "muted"), Type("text", 18, "muted")
+    name_y, description_y, description_width = 56, 90, 620
+    language_y, stars_y = 52, 88
+    body.append(c.text(repo["name"], COL, name_y, Type("display", 34, "ink", -0.02), optical=True))
+    desc = c.fit(repo["description"] or "No description yet", description, description_width)
+    body.append(c.text(desc, COL, description_y, description))
     if language := repo["language"]:
-        body.append(c.text(language, W, 52, note, anchor="end"))
+        body.append(c.text(language, W, language_y, mono, anchor="end"))
     stars = repo["stars"]
-    body.append(c.text(f"{stars} star{'' if stars == 1 else 's'}", W, 88, note, anchor="end"))
+    body.append(c.text(f"{stars} star{'' if stars == 1 else 's'}", W, stars_y, mono, anchor="end"))
     if last:
         body.append(c.rule(H - 1, span="content"))
     return c.render(H, "".join(body), alt)
@@ -696,12 +702,11 @@ def build_work_row(F: Fonts, t: Theme, alt: str, repo: Repo, head: bool = False,
 
 def build_colophon(F: Fonts, t: Theme, alt: str, today: dt.date) -> str:
     c = Canvas(F, t)
-    small = Type("text", 16, "muted")
     credits = "Set in Mona Sans and Monaspace Neon. Artwork generated with Python."
     body = [
         c.rule(),
-        c.text(f"{CONFIG['name']}, {today.year}", 0, LABEL_BASELINE, small),
-        c.text(credits, W, LABEL_BASELINE, small, anchor="end"),
+        c.text(f"{CONFIG['name']}, {today.year}", 0, LABEL_BASELINE, NOTE),
+        c.text(credits, W, LABEL_BASELINE, NOTE, anchor="end"),
     ]
     return c.render(70, "".join(body), alt)
 
@@ -724,11 +729,11 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         ("Stars earned", activity.stars),
         ("Followers", activity.followers),
     ]
-    figure, small = Type("display", 60, "ink", -0.03), Type("text", 16, "muted")
+    figure = Type("display", 60, "ink", -0.03)
     num_base = c.first_baseline(figure)
     for (label, value), x in zip(metrics, c.columns(len(metrics)), strict=True):
         body.append(c.text(fmt_count(value), x, num_base, figure, optical=True))
-        body.append(c.text(label, x, num_base + 36, small))
+        body.append(c.text(label, x, num_base + 36, NOTE))
 
     # contribution calendar: full width, like the hero, so the cells stay legible
     days = (activity.days or [])[-371:]
@@ -763,16 +768,16 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
     )
     y_leg = y_cal + 30 + 7 * pitch + 30
     key = 13
-    caption = Type("text", 14, "muted")
-    lx = W - 5 * (key + 4) - c.measure("More", caption) - 10
-    body.append(c.text("Less", lx - 10, y_leg, caption, anchor="end"))
+    legend = Type("text", 14, "muted")
+    lx = W - 5 * (key + 4) - c.measure("More", legend) - 10
+    body.append(c.text("Less", lx - 10, y_leg, legend, anchor="end"))
     for i, col in enumerate(ramp):
         body.append(
             f'<rect x="{lx + i * (key + 4):.1f}" y="{y_leg - key + 1:.1f}" width="{key}" '
             f'height="{key}" rx="2.5" fill="{col}"/>'
         )
-    body.append(c.text("More", W, y_leg, caption, anchor="end"))
-    body.append(c.text(f"Updated {today.day} {today:%B %Y}", 0, y_leg, caption))
+    body.append(c.text("More", W, y_leg, legend, anchor="end"))
+    body.append(c.text(f"Updated {today.day} {today:%B %Y}", 0, y_leg, legend))
 
     langs = sorted((activity.languages or {}).items(), key=lambda kv: -kv[1])
     y = y_leg + 24
@@ -785,7 +790,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
             top.append(("Other", rest))
         total = sum(v for _, v in top)
         shades = [t["accent"]] + [mix(t["page"], t["accent"], a) for a in (0.66, 0.44, 0.28, 0.16, 0.08)]
-        body.append(c.text("Most used languages", COL, y - 18, caption))
+        body.append(c.text("Most used languages", COL, y - 18, legend))
         x = COL
         gap = 4
         usable = W - COL - gap * (len(top) - 1)
@@ -799,7 +804,8 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
         lx, ly = COL, y + 48
         language, share = Type("text", 17, "ink"), Type("text", 17, "muted")
         for i, (name, v) in enumerate(top):
-            label = f"{name} {100 * v / total:.0f}%"
+            percent = f"{100 * v / total:.0f}%"
+            label = f"{name} {percent}"
             wlab = c.measure(label, language) + 20 + 32
             if lx + wlab > W:
                 lx, ly = COL, ly + 32
@@ -807,7 +813,7 @@ def build_activity(F: Fonts, t: Theme, alt: str, activity: Activity, today: dt.d
                 f'<rect x="{lx:.1f}" y="{ly - 11:.1f}" width="11" height="11" rx="2" fill="{shades[i]}"/>'
             )
             body.append(c.text(name, lx + 20, ly, language))
-            body.append(c.text(f"{100 * v / total:.0f}%", lx + 26 + c.measure(name, language), ly, share))
+            body.append(c.text(percent, lx + 26 + c.measure(name, language), ly, share))
             lx += wlab
         y = ly + 24
     return c.render(int(y), "".join(body), alt)
@@ -841,7 +847,7 @@ def row_group(rows: list[Section]) -> list[Section]:
 
 
 def work_alt(repo: Repo) -> str:
-    return f"{repo['name']}. {repo['description']}" if repo.get("description") else repo["name"]
+    return f"{repo['name']}. {repo['description']}" if repo["description"] else repo["name"]
 
 
 def sections(activity: Activity, today: dt.date) -> list[Section]:
