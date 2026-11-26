@@ -7,11 +7,11 @@ target-version = "py312"
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "ERA"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["activity", "build", "fontstore"]
+known-first-party = ["activity", "build", "canvas", "fontstore", "hero"]
 
 [tool.mypy]
 python_version = "3.12"
-files = ["activity.py", "build.py", "fontstore.py", "tests"]
+files = ["activity.py", "build.py", "canvas.py", "fontstore.py", "hero.py", "tests"]
 check_untyped_defs = true
 warn_unused_ignores = true
 
@@ -20,5 +20,5 @@ module = ["contourpy", "uharfbuzz", "fontTools.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["activity", "build", "fontstore"]
+module = ["activity", "build", "canvas", "fontstore", "hero"]
 disallow_untyped_defs = true

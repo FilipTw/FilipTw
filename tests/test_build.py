@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 import build
+import canvas
 from activity import Activity
 
 HERE = Path(__file__).resolve().parent
@@ -89,10 +90,10 @@ def test_main_links_the_readme_to_head_outside_github_actions(monkeypatch, tmp_p
 
 def test_mona_sans_cap_height_matches_the_grid_it_was_designed_with():
     """The Grid lines up first lines by cap height; another font would move them."""
-    fonts = build.fonts()
+    fonts = canvas.fonts()
     for role in ("display", "text", "medium"):
         assert fonts[role].cap_height == 0.729
 
 
 def test_every_colour_role_is_a_theme_field():
-    assert typing.get_args(build.Role) == tuple(f.name for f in fields(build.Theme))
+    assert typing.get_args(canvas.Role) == tuple(f.name for f in fields(canvas.Theme))
