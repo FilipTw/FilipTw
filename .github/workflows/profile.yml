@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - build.py
+      - activity.py
       - requirements*.txt
       - tests/**
       - .github/workflows/profile.yml
