@@ -1,0 +1,24 @@
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import order, B bugbear, UP pyupgrade, SIM simplify, ERA commented-out code
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "ERA"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["activity", "build"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["activity.py", "build.py", "tests"]
+check_untyped_defs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["contourpy", "uharfbuzz", "fontTools.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["activity"]
+disallow_untyped_defs = true
