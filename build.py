@@ -340,7 +340,7 @@ def poly_d(pts):
     return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
 
 
-def build_hero(F, t):
+def build_hero(F, t, alt):
     c = Canvas()
     H = HERO_H
     lines, zmin = contour_lines()
@@ -468,7 +468,7 @@ def build_hero(F, t):
     c.css.append(".fd{animation:fd 1.3s cubic-bezier(.19,1,.22,1) both}"
                  "@keyframes fd{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}"
                  "@media (prefers-reduced-motion:reduce){.ct,.trail,.dot,.pulse,.ch,.fd,.fr{animation:none!important}}")
-    return c.render(H, "".join(body), f'{name}, {CONFIG["role"]}. {CONFIG["tagline"]}')
+    return c.render(H, "".join(body), alt)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -482,7 +482,7 @@ def section_head(c, F, t, label, right=None):
     return out
 
 
-def build_about(F, t):
+def build_about(F, t, alt):
     c = Canvas()
     body = section_head(c, F, t, "About")
     size, lh = 38, 50
@@ -497,10 +497,10 @@ def build_about(F, t):
         body.append(c.text(F["text"], label, x, y, 17, t["muted"]))
         for k, line in enumerate(c.wrap(F["text"], value, 21, colw - 40)):
             body.append(c.text(F["text"], line, x, y + 34 + k * 29, 21, t["ink"]))
-    return c.render(int(y + 34 + 29 * 2 + 20), "".join(body), "About. " + CONFIG["about"])
+    return c.render(int(y + 34 + 29 * 2 + 20), "".join(body), alt)
 
 
-def build_stack(F, t):
+def build_stack(F, t, alt):
     c = Canvas()
     body = section_head(c, F, t, "Stack")
     groups = CONFIG["stack"]
@@ -519,11 +519,10 @@ def build_stack(F, t):
             for k, item in enumerate(items):
                 body.append(c.text(F["text"], item, x, y + 40 + k * lh, 24, t["ink"], -0.01))
         y += row_h[r]
-    label = "Stack. " + ". ".join(f"{g}: {', '.join(i)}" for g, i in groups)
-    return c.render(int(y - 30), "".join(body), label)
+    return c.render(int(y - 30), "".join(body), alt)
 
 
-def build_contact(F, t):
+def build_contact(F, t, alt):
     c = Canvas()
     body = section_head(c, F, t, "Contact")
     size = 58
@@ -531,10 +530,10 @@ def build_contact(F, t):
     y = 46 - 0.729 * 17 + 0.729 * size
     for i, line in enumerate(lines):
         body.append(c.text(F["display"], line, COL, y + i * 70, size, t["ink"], -0.03, optical=True))
-    return c.render(int(y + (len(lines) - 1) * 70 + 56), "".join(body), CONFIG["contact_line"])
+    return c.render(int(y + (len(lines) - 1) * 70 + 56), "".join(body), alt)
 
 
-def build_link_row(F, t, label, value, last=False):
+def build_link_row(F, t, alt, label, value, last=False):
     c = Canvas()
     H = 78
     body = [f'<rect x="{COL}" y="0" width="{W - COL}" height="1" fill="{t["line"]}"/>',
@@ -542,10 +541,10 @@ def build_link_row(F, t, label, value, last=False):
             c.text(F["text"], value, COL + 300, 48, 24, t["accent"], -0.01)]
     if last:
         body.append(f'<rect x="{COL}" y="{H - 1}" width="{W - COL}" height="1" fill="{t["line"]}"/>')
-    return c.render(H, "".join(body), f"{label}: {value}")
+    return c.render(H, "".join(body), alt)
 
 
-def build_work_row(F, t, repo, head=False, last=False):
+def build_work_row(F, t, alt, repo, head=False, last=False):
     c = Canvas()
     H = 112
     body = []
@@ -563,16 +562,16 @@ def build_work_row(F, t, repo, head=False, last=False):
     body.append(c.text(F["mono"], f'{stars} star{"" if stars == 1 else "s"}', W, 88, 15, t["muted"], anchor="end"))
     if last:
         body.append(f'<rect x="{COL}" y="{H - 1}" width="{W - COL}" height="1" fill="{t["line"]}"/>')
-    return c.render(H, "".join(body), f'{repo["name"]}. {repo.get("description") or ""}')
+    return c.render(H, "".join(body), alt)
 
 
-def build_colophon(F, t, today):
+def build_colophon(F, t, alt, today):
     c = Canvas()
     body = [f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
             c.text(F["text"], f'{CONFIG["name"]}, {today.year}', 0, 46, 16, t["muted"]),
             c.text(F["text"], "Set in Mona Sans and Monaspace Neon. Artwork generated with Python.",
                    W, 46, 16, t["muted"], anchor="end")]
-    return c.render(70, "".join(body), f'{CONFIG["name"]}, {today.year}')
+    return c.render(70, "".join(body), alt)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -686,13 +685,16 @@ def fetch_activity(user):
     return data
 
 
-def build_activity(F, t, data, today):
+def fmt_count(v):
+    """A metric as the profile shows it: 1,234, or a dash when GitHub did not report it."""
+    return f"{v:,}" if isinstance(v, int) else "\u2013"
+
+
+def build_activity(F, t, alt, data, today):
     c = Canvas()
     body = section_head(c, F, t, "Activity")
 
     # metrics
-    def fmt(v):
-        return f"{v:,}" if isinstance(v, int) else "\u2013"
     metrics = [("Contributions this year", data.get("contributions")),
                ("Public repositories", data.get("repos")),
                ("Stars earned", data.get("stars")),
@@ -701,7 +703,7 @@ def build_activity(F, t, data, today):
     num_base = 46 - 0.729 * 17 + 0.729 * 60
     for j, (label, value) in enumerate(metrics):
         x = COL + j * colw
-        body.append(c.text(F["display"], fmt(value), x, num_base, 60, t["ink"], -0.03, optical=True))
+        body.append(c.text(F["display"], fmt_count(value), x, num_base, 60, t["ink"], -0.03, optical=True))
         body.append(c.text(F["text"], label, x, num_base + 36, 16, t["muted"]))
 
     # contribution calendar: full width, like the hero, so the cells stay legible
@@ -774,9 +776,7 @@ def build_activity(F, t, data, today):
                                lx + 26 + c.measure(F["text"], name, 17), ly, 17, t["muted"]))
             lx += wlab
         y = ly + 24
-    total = data.get("contributions")
-    label = f"Activity. {fmt(total)} contributions in the last year."
-    return c.render(int(y), "".join(body), label)
+    return c.render(int(y), "".join(body), alt)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -794,7 +794,7 @@ class Section:
     """One strip of the profile: a light and a dark SVG, and one picture in the README."""
     stem: str
     alt: str
-    draw: Callable[[dict], str]   # Theme -> SVG
+    draw: Callable[[dict, str], str]   # (Theme, alt) -> SVG
     link: Optional[str] = None
     gap: Gap = Gap.NONE
 
@@ -812,11 +812,11 @@ def sections(activity, today, F):
     ]
     for i, repo in enumerate(work):
         last = i == len(work) - 1
-        out.append(Section(f"work-{i + 1}", f'{repo["name"]}: {repo.get("description") or ""}',
+        out.append(Section(f"work-{i + 1}", f'{repo["name"]}. {repo.get("description") or ""}',
                            partial(build_work_row, F, repo=repo, head=i == 0, last=last),
                            link=repo["url"], gap=Gap.SECTION if last else Gap.NONE))
     out += [
-        Section("activity", f'Activity: {activity.get("contributions", 0)} contributions in the last year',
+        Section("activity", f'Activity. {fmt_count(activity.get("contributions"))} contributions in the last year.',
                 partial(build_activity, F, data=activity, today=today), gap=Gap.SECTION),
         Section("contact", CONFIG["contact_line"], partial(build_contact, F), gap=Gap.END),
     ]
@@ -854,7 +854,7 @@ def render_readme(svgs, branch):
 
 def build_profile(activity, today, F, branch):
     """Every generated file, as {path relative to the repo root: text}. Pure: nothing is read or written."""
-    svgs = [(s, {name: s.draw(t) for name, t in THEMES.items()}) for s in sections(activity, today, F)]
+    svgs = [(s, {name: s.draw(t, s.alt) for name, t in THEMES.items()}) for s in sections(activity, today, F)]
     files = {f"{ASSETS}/{s.stem}-{name}.svg": svg for s, by_theme in svgs for name, svg in by_theme.items()}
     files["README.md"] = render_readme(svgs, branch)
     return files

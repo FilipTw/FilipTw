@@ -1,6 +1,7 @@
 """The whole profile, built from fixed inputs, must match tests/golden/."""
 import datetime as dt
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -43,3 +44,12 @@ def test_written_profile_is_exactly_the_built_files(files, tmp_path):
     (tmp_path / "assets" / "work-9-light.svg").write_text("<svg/>")  # a Section that no longer exists
     build.write_profile(files, tmp_path)
     assert read_tree(tmp_path) == files
+
+
+def test_readme_alt_text_matches_each_svg_title(files):
+    alts = re.findall(r'srcset="[^"]*/assets/([\w-]+)-dark\.svg\?v=\w+" /><img [^>]* alt="([^"]*)"', files["README.md"])
+    assert alts, "no pictures found in README.md"
+    for stem, alt in alts:
+        for theme in build.THEMES:
+            title = re.search(r"<title>([^<]*)</title>", files[f"assets/{stem}-{theme}.svg"]).group(1)
+            assert alt == title, f"{stem}: README says {alt!r}, SVG says {title!r}"
