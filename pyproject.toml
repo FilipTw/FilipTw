@@ -20,5 +20,5 @@ module = ["contourpy", "uharfbuzz", "fontTools.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["activity", "fontstore"]
+module = ["activity", "build", "fontstore"]
 disallow_untyped_defs = true

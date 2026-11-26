@@ -24,10 +24,11 @@ from dataclasses import dataclass, replace
 from enum import Enum, auto
 from functools import cache, partial
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, cast
 
 import contourpy
 import numpy as np
+import numpy.typing as npt
 import uharfbuzz as hb
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -355,11 +356,12 @@ def fonts() -> Fonts:
 # ════════════════════════════════════════════════════════════════════════════
 #  Hero: gradient descent on a loss surface
 # ════════════════════════════════════════════════════════════════════════════
+Points = npt.NDArray[np.float64]  # an (n, 2) array of x, y
 HERO_H = 760
 TARGET = (845.0, 262.0)
 
 
-def loss(x, y):
+def loss(x: npt.ArrayLike, y: npt.ArrayLike) -> Points:
     x, y = np.asarray(x, float) / 1000, np.asarray(y, float) / 1000
     gx, gy = TARGET[0] / 1000, TARGET[1] / 1000
     u, v = (x - gx) / 0.20, (y - gy) / 0.11
@@ -372,7 +374,13 @@ def loss(x, y):
 
 
 @cache  # pure and Theme-independent: both Themes share one result
-def descent(start=(110.0, 128.0), lr=2500.0, beta=0.88, steps=220, h=0.5):
+def descent(
+    start: tuple[float, float] = (110.0, 128.0),
+    lr: float = 2500.0,
+    beta: float = 0.88,
+    steps: int = 220,
+    h: float = 0.5,
+) -> Points:
     p, vel, pts = np.array(start), np.zeros(2), [np.array(start)]
     for _ in range(steps):
         g = np.array(
@@ -390,7 +398,7 @@ def descent(start=(110.0, 128.0), lr=2500.0, beta=0.88, steps=220, h=0.5):
     return path[: last + 1]
 
 
-def smooth(pts, times, step=7.0):
+def smooth(pts: Points, times: list[float], step: float = 7.0) -> tuple[Points, list[float]]:
     """Catmull-Rom resampling so the trail and the marker share one smooth curve."""
     out_p, out_t = [pts[0]], [times[0]]
     n = len(pts)
@@ -411,7 +419,7 @@ def smooth(pts, times, step=7.0):
     return np.array(out_p), out_t
 
 
-def simplify(pts, eps):
+def simplify(pts: Points, eps: float) -> Points:
     if len(pts) < 3:
         return pts
     a, b = pts[0], pts[-1]
@@ -428,7 +436,7 @@ def simplify(pts, eps):
     return np.vstack([a, b])
 
 
-def inside(poly, pt):
+def inside(poly: Points, pt: tuple[float, float]) -> bool:
     x, y = pt
     hit = False
     for (x1, y1), (x2, y2) in zip(poly, np.roll(poly, -1, axis=0), strict=True):
@@ -438,14 +446,16 @@ def inside(poly, pt):
 
 
 @cache  # pure and Theme-independent: both Themes share one result
-def contour_lines(levels=34, res=3.0, pad=40):
+def contour_lines(
+    levels: int = 34, res: float = 3.0, pad: int = 40
+) -> tuple[list[tuple[int, Points, bool]], float]:
     xs, ys = np.arange(-pad, W + pad, res), np.arange(-pad, HERO_H + pad, res)
     X, Y = np.meshgrid(xs, ys)
     Z = loss(X, Y)
     gen = contourpy.contour_generator(X, Y, Z, line_type=contourpy.LineType.Separate)
     out = []
     for k, level in enumerate(np.linspace(Z.min() + 0.02, np.percentile(Z, 92), levels)):
-        for line in gen.lines(level):
+        for line in cast(list[Points], gen.lines(level)):  # LineType.Separate: one array per line
             if len(line) >= 6:
                 line = simplify(line, 0.35)
                 closed = np.allclose(line[0], line[-1])
@@ -453,7 +463,7 @@ def contour_lines(levels=34, res=3.0, pad=40):
     return out, float(Z.min())
 
 
-def poly_d(pts):
+def poly_d(pts: Points) -> str:
     return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts)
 
 
