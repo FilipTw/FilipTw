@@ -1,4 +1,5 @@
 """Activity: the live numbers on the profile, fetched from GitHub."""
+
 import http.client
 import json
 import re
@@ -11,13 +12,14 @@ from typing import Optional
 @dataclass(frozen=True)
 class Activity:
     """What GitHub reported. A number no source supplied is None, and the profile shows a dash."""
+
     contributions: Optional[int] = None
-    days: Optional[list] = None        # [(ISO date, contributions, level 0-4)], oldest first
+    days: Optional[list] = None  # [(ISO date, contributions, level 0-4)], oldest first
     repos: Optional[int] = None
     stars: Optional[int] = None
     followers: Optional[int] = None
-    languages: Optional[dict] = None   # {language: weight}; only the shares are drawn, see below
-    work: Optional[list] = None        # [{name, description, url, stars, language}]
+    languages: Optional[dict] = None  # {language: weight}; only the shares are drawn, see below
+    work: Optional[list] = None  # [{name, description, url, stars, language}]
 
     @property
     def complete(self):
@@ -62,8 +64,9 @@ def pick_work(repos, user, limit):
 def fetch_graphql(user, token, transport, work_limit):
     """Everything in one query. Languages weigh bytes of code per language in each repository.
     Stars are summed over the 100 most starred repositories only (first:100), enough for this profile."""
-    res = json.loads(transport("https://api.github.com/graphql", token,
-                               {"query": QUERY, "variables": {"login": user}}))
+    res = json.loads(
+        transport("https://api.github.com/graphql", token, {"query": QUERY, "variables": {"login": user}})
+    )
     if res.get("errors"):
         raise ActivityUnavailable(res["errors"][0].get("message"))
     u = res["data"]["user"]
@@ -71,9 +74,13 @@ def fetch_graphql(user, token, transport, work_limit):
         raise ActivityUnavailable(f"no GitHub user {user}")
 
     def repo(n):
-        return {"name": n["name"], "description": n["description"], "url": n["url"],
-                "stars": n["stargazerCount"],
-                "language": (n["primaryLanguage"] or {}).get("name")}
+        return {
+            "name": n["name"],
+            "description": n["description"],
+            "url": n["url"],
+            "stars": n["stargazerCount"],
+            "language": (n["primaryLanguage"] or {}).get("name"),
+        }
 
     langs = {}
     for r in u["repositories"]["nodes"]:
@@ -83,8 +90,11 @@ def fetch_graphql(user, token, transport, work_limit):
     cal = u["contributionsCollection"]["contributionCalendar"]
     return {
         "contributions": cal["totalContributions"],
-        "days": [(d["date"], d["contributionCount"], LEVELS[d["contributionLevel"]])
-                 for w in cal["weeks"] for d in w["contributionDays"]],
+        "days": [
+            (d["date"], d["contributionCount"], LEVELS[d["contributionLevel"]])
+            for w in cal["weeks"]
+            for d in w["contributionDays"]
+        ],
         "languages": langs,
         "repos": u["repositories"]["totalCount"],
         "followers": u["followers"]["totalCount"],
@@ -101,7 +111,9 @@ def fetch_calendar(user, transport):
         raise ActivityUnavailable("no calendar cells on the page")
     days = []
     for date, cid, level in page.cells:
-        m = re.match(r"([\d,]+) contribution", page.tips.get(cid, "").strip())  # "No contributions on …" counts 0
+        m = re.match(
+            r"([\d,]+) contribution", page.tips.get(cid, "").strip()
+        )  # "No contributions on …" counts 0
         days.append((date, int(m.group(1).replace(",", "")) if m else 0, int(level)))
     days.sort()
     return {"days": days, "contributions": sum(d[1] for d in days)}
@@ -142,11 +154,24 @@ def fetch_rest(user, token, transport, work_limit):
         if r["language"]:
             langs[r["language"]] = langs.get(r["language"], 0) + max(r["size"], 1)
     return {
-        "repos": len(own), "followers": profile["followers"], "languages": langs,
+        "repos": len(own),
+        "followers": profile["followers"],
+        "languages": langs,
         "stars": sum(r["stargazers_count"] for r in own),
-        "work": pick_work([{"name": r["name"], "description": r["description"], "url": r["html_url"],
-                            "stars": r["stargazers_count"], "language": r["language"]} for r in own],
-                          user, work_limit),
+        "work": pick_work(
+            [
+                {
+                    "name": r["name"],
+                    "description": r["description"],
+                    "url": r["html_url"],
+                    "stars": r["stargazers_count"],
+                    "language": r["language"],
+                }
+                for r in own
+            ],
+            user,
+            work_limit,
+        ),
     }
 
 

@@ -13,6 +13,7 @@ and any change to CONFIG is rebuilt automatically after you commit it.
 Typefaces: Mona Sans and Monaspace Neon by GitHub (SIL Open Font License),
 downloaded from npm into .fonts/ on first run.
 """
+
 import datetime as dt
 import hashlib
 import html
@@ -80,16 +81,28 @@ CONFIG = {
 # ════════════════════════════════════════════════════════════════════════════
 THEMES = {
     "light": {
-        "page": "#FFFFFF", "ink": "#0A0B0D", "muted": "#676C75", "faint": "#A5AAB2",
-        "line": "#E2E4E8", "contour": "#CDD1D8", "accent": "#2B3BFF", "cell": "#E8EBEF",
+        "page": "#FFFFFF",
+        "ink": "#0A0B0D",
+        "muted": "#676C75",
+        "faint": "#A5AAB2",
+        "line": "#E2E4E8",
+        "contour": "#CDD1D8",
+        "accent": "#2B3BFF",
+        "cell": "#E8EBEF",
     },
     "dark": {
-        "page": "#0D1117", "ink": "#EEF1F5", "muted": "#8C939D", "faint": "#565D67",
-        "line": "#262C35", "contour": "#28303B", "accent": "#7D87FF", "cell": "#1D232C",
+        "page": "#0D1117",
+        "ink": "#EEF1F5",
+        "muted": "#8C939D",
+        "faint": "#565D67",
+        "line": "#262C35",
+        "contour": "#28303B",
+        "accent": "#7D87FF",
+        "cell": "#1D232C",
     },
 }
-W = 1200          # every asset shares this width, so edges align in the README
-COL = 300         # editorial grid: label column | content column
+W = 1200  # every asset shares this width, so edges align in the README
+COL = 300  # editorial grid: label column | content column
 FONT_SOURCES = {
     "mona-sans-latin-wdth-normal.woff2": ("@fontsource-variable/mona-sans", "5.3.0"),
     "monaspace-neon-latin-400-normal.woff2": ("@fontsource/monaspace-neon", "5.3.0"),
@@ -139,8 +152,10 @@ class Font:
         buf.add_str(text)
         buf.guess_segment_properties()
         hb.shape(self.hb, buf, {"kern": True, "liga": True})
-        return [(self.order[i.codepoint], p.x_advance, p.x_offset, p.y_offset)
-                for i, p in zip(buf.glyph_infos, buf.glyph_positions)]
+        return [
+            (self.order[i.codepoint], p.x_advance, p.x_offset, p.y_offset)
+            for i, p in zip(buf.glyph_infos, buf.glyph_positions)
+        ]
 
     def outline(self, glyph):
         pen = SVGPathPen(self.glyphs, ntos=lambda v: f"{v:.1f}".rstrip("0").rstrip("."))
@@ -190,10 +205,8 @@ class Canvas:
     def use(key, x, y, s):
         return f'<use href="#{key}" transform="translate({x:.2f} {y:.2f}) scale({s:.5f} {-s:.5f})"/>'
 
-    def text(self, font, text, x, y, size, fill, tracking=0.0, anchor="start",
-             optical=False, attrs=""):
-        inner = "".join(self.use(*g) for g in
-                        self.glyphs(font, text, x, y, size, tracking, anchor, optical))
+    def text(self, font, text, x, y, size, fill, tracking=0.0, anchor="start", optical=False, attrs=""):
+        inner = "".join(self.use(*g) for g in self.glyphs(font, text, x, y, size, tracking, anchor, optical))
         return f'<g fill="{fill}"{attrs}>{inner}</g>'
 
     def wrap(self, font, text, size, width, tracking=0.0):
@@ -226,15 +239,17 @@ class Canvas:
         defs = "".join(f'<path id="{k}" d="{d}"/>' for k, d in self.defs.items() if d)
         style = f"<style>{''.join(self.css)}</style>" if self.css else ""
         label = html.escape(label)
-        return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {height}" '
-                f'width="{W}" height="{height}" role="img" aria-label="{label}">'
-                f'<title>{label}</title><defs>{defs}{"".join(self.extra)}{style}</defs>'
-                f'{body}</svg>')
+        return (
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {height}" '
+            f'width="{W}" height="{height}" role="img" aria-label="{label}">'
+            f"<title>{label}</title><defs>{defs}{''.join(self.extra)}{style}</defs>"
+            f"{body}</svg>"
+        )
 
 
 def mix(a, b, t):
-    ca = [int(a[i:i + 2], 16) for i in (1, 3, 5)]
-    cb = [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    ca = [int(a[i : i + 2], 16) for i in (1, 3, 5)]
+    cb = [int(b[i : i + 2], 16) for i in (1, 3, 5)]
     return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(ca, cb))
 
 
@@ -270,8 +285,12 @@ def loss(x, y):
 def descent(start=(110.0, 128.0), lr=2500.0, beta=0.88, steps=220, h=0.5):
     p, vel, pts = np.array(start), np.zeros(2), [np.array(start)]
     for _ in range(steps):
-        g = np.array([(loss(p[0] + h, p[1]) - loss(p[0] - h, p[1])) / (2 * h),
-                      (loss(p[0], p[1] + h) - loss(p[0], p[1] - h)) / (2 * h)])
+        g = np.array(
+            [
+                (loss(p[0] + h, p[1]) - loss(p[0] - h, p[1])) / (2 * h),
+                (loss(p[0], p[1] + h) - loss(p[0], p[1] - h)) / (2 * h),
+            ]
+        )
         vel = beta * vel - lr * g
         p = p + vel
         pts.append(p.copy())
@@ -291,8 +310,12 @@ def smooth(pts, times, step=7.0):
         k = max(1, int(np.ceil(np.hypot(*(p2 - p1)) / step)))
         for j in range(1, k + 1):
             u = j / k
-            q = 0.5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u ** 2
-                       + (-p0 + 3 * p1 - 3 * p2 + p3) * u ** 3)
+            q = 0.5 * (
+                (2 * p1)
+                + (-p0 + p2) * u
+                + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u**2
+                + (-p0 + 3 * p1 - 3 * p2 + p3) * u**3
+            )
             out_p.append(q)
             out_t.append(times[i] + (times[i + 1] - times[i]) * u)
     return np.array(out_p), out_t
@@ -304,8 +327,11 @@ def simplify(pts, eps):
     a, b = pts[0], pts[-1]
     ab = b - a
     n = np.hypot(*ab)
-    d = np.abs(ab[0] * (pts[:, 1] - a[1]) - ab[1] * (pts[:, 0] - a[0])) / n if n > 1e-9 \
+    d = (
+        np.abs(ab[0] * (pts[:, 1] - a[1]) - ab[1] * (pts[:, 0] - a[0])) / n
+        if n > 1e-9
         else np.hypot(*(pts - a).T)
+    )
     i = int(np.argmax(d))
     if d[i] > eps:
         return np.vstack([simplify(pts[: i + 1], eps)[:-1], simplify(pts[i:], eps)])
@@ -346,7 +372,7 @@ def build_hero(F, t, alt):
     lines, zmin = contour_lines()
     pts = descent()
     n = len(pts)
-    t0, dur = 1.25, 3.6                        # descent start, duration (s)
+    t0, dur = 1.25, 3.6  # descent start, duration (s)
     times = [t0 + dur * i / (n - 1) for i in range(n)]
     body = []
 
@@ -361,8 +387,10 @@ def build_hero(F, t, alt):
             width = 1.1 + 0.4 * tint
         else:
             stroke, width = t["contour"], 1.1
-        paths.append(f'<path class="ct" pathLength="1" style="animation-delay:{0.05 + k * 0.032:.3f}s" '
-                     f'd="{poly_d(line)}" stroke="{stroke}" stroke-width="{width:.2f}"/>')
+        paths.append(
+            f'<path class="ct" pathLength="1" style="animation-delay:{0.05 + k * 0.032:.3f}s" '
+            f'd="{poly_d(line)}" stroke="{stroke}" stroke-width="{width:.2f}"/>'
+        )
     body.append(f'<g fill="none" mask="url(#fade)">{"".join(paths)}</g>')
     c.extra.append(
         f'<radialGradient id="rad" gradientUnits="userSpaceOnUse" cx="790" cy="300" r="820">'
@@ -372,47 +400,85 @@ def build_hero(F, t, alt):
         f'<stop offset=".5" stop-opacity="0"/><stop offset=".9" stop-opacity=".92"/></linearGradient>'
         f'<mask id="fade" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
         f'<rect width="{W}" height="{H}" fill="url(#rad)"/>'
-        f'<rect width="{W}" height="{H}" fill="url(#vfade)"/></mask>')
-    c.css.append(".ct{stroke-dasharray:1 1;animation:draw 2.2s cubic-bezier(.65,0,.35,1) both}"
-                 "@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}")
+        f'<rect width="{W}" height="{H}" fill="url(#vfade)"/></mask>'
+    )
+    c.css.append(
+        ".ct{stroke-dasharray:1 1;animation:draw 2.2s cubic-bezier(.65,0,.35,1) both}"
+        "@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}"
+    )
 
     # ── descent trail and marker ───────────────────────────────────────────
     curve, ctimes = smooth(pts, times)
     seg = np.hypot(*np.diff(curve, axis=0).T)
     cum = np.concatenate([[0], np.cumsum(seg)]) / seg.sum()
     # max(): the last offset is 1 - 1.0000000000000002 on some platforms, which would print as -0.0000
-    trail_kf = "".join(f"{(ti - t0) / dur * 100:.2f}%{{stroke-dashoffset:{max(1 - ci, 0.0):.4f}}}"
-                       for ti, ci in zip(ctimes, cum))
-    move_kf = "".join(f"{(ti - t0) / dur * 100:.2f}%{{transform:translate({x:.1f}px,{y:.1f}px)}}"
-                      for ti, (x, y) in zip(ctimes, curve))
-    c.css.append(f".trail{{stroke-dasharray:1 1;animation:trail {dur}s linear {t0}s both}}"
-                 f"@keyframes trail{{{trail_kf}}}"
-                 f".dot{{animation:move {dur}s linear {t0}s both}}@keyframes move{{{move_kf}}}")
+    trail_kf = "".join(
+        f"{(ti - t0) / dur * 100:.2f}%{{stroke-dashoffset:{max(1 - ci, 0.0):.4f}}}"
+        for ti, ci in zip(ctimes, cum)
+    )
+    move_kf = "".join(
+        f"{(ti - t0) / dur * 100:.2f}%{{transform:translate({x:.1f}px,{y:.1f}px)}}"
+        for ti, (x, y) in zip(ctimes, curve)
+    )
+    c.css.append(
+        f".trail{{stroke-dasharray:1 1;animation:trail {dur}s linear {t0}s both}}"
+        f"@keyframes trail{{{trail_kf}}}"
+        f".dot{{animation:move {dur}s linear {t0}s both}}@keyframes move{{{move_kf}}}"
+    )
     sx, sy = pts[0]
     ex, ey = pts[-1]
-    body.append(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="4.5" fill="none" stroke="{t["muted"]}" '
-                f'stroke-width="1.4" class="fd" style="animation-delay:{t0 - 0.3}s"/>')
-    body.append(f'<path class="trail" pathLength="1" d="{poly_d(curve)}" fill="none" stroke="{t["accent"]}" '
-                f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>')
+    body.append(
+        f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="4.5" fill="none" stroke="{t["muted"]}" '
+        f'stroke-width="1.4" class="fd" style="animation-delay:{t0 - 0.3}s"/>'
+    )
+    body.append(
+        f'<path class="trail" pathLength="1" d="{poly_d(curve)}" fill="none" stroke="{t["accent"]}" '
+        f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+    )
     body.append(
         f'<g class="dot" transform="translate({ex:.1f} {ey:.1f})">'
         f'<circle class="pulse" r="7" fill="none" stroke="{t["accent"]}" stroke-width="1.4"/>'
         f'<circle r="13" fill="{t["accent"]}" opacity=".16"/>'
-        f'<circle r="6" fill="{t["accent"]}"/></g>')
-    c.css.append(f".pulse{{transform-box:fill-box;transform-origin:center;"
-                 f"animation:pulse 2.8s cubic-bezier(.2,.6,.3,1) {t0 + dur:.2f}s infinite both}}"
-                 "@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(4.2);opacity:0}}")
+        f'<circle r="6" fill="{t["accent"]}"/></g>'
+    )
+    c.css.append(
+        f".pulse{{transform-box:fill-box;transform-origin:center;"
+        f"animation:pulse 2.8s cubic-bezier(.2,.6,.3,1) {t0 + dur:.2f}s infinite both}}"
+        "@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(4.2);opacity:0}}"
+    )
     lx, ly = ex + 150, ey - 112
-    body.append(f'<g class="fd" style="animation-delay:{t0 + dur:.2f}s">'
-                f'<path d="M{ex + 10:.1f} {ey - 10:.1f}L{lx - 40:.1f} {ly:.1f}H{lx - 8:.1f}" fill="none" '
-                f'stroke="{t["muted"]}" stroke-width="1"/>'
-                + c.text(F["mono"], "minimum", lx, ly + 5, 14, t["muted"]) + '</g>')
-    body.append(c.text(F["mono"], "init", sx, sy + 30, 14, t["muted"], anchor="middle",
-                       attrs=f' class="fd" style="animation-delay:{t0 - 0.3}s"'))
+    body.append(
+        f'<g class="fd" style="animation-delay:{t0 + dur:.2f}s">'
+        f'<path d="M{ex + 10:.1f} {ey - 10:.1f}L{lx - 40:.1f} {ly:.1f}H{lx - 8:.1f}" fill="none" '
+        f'stroke="{t["muted"]}" stroke-width="1"/>'
+        + c.text(F["mono"], "minimum", lx, ly + 5, 14, t["muted"])
+        + "</g>"
+    )
+    body.append(
+        c.text(
+            F["mono"],
+            "init",
+            sx,
+            sy + 30,
+            14,
+            t["muted"],
+            anchor="middle",
+            attrs=f' class="fd" style="animation-delay:{t0 - 0.3}s"',
+        )
+    )
 
     # ── top row: caption + live readout ────────────────────────────────────
-    body.append(c.text(F["text"], CONFIG["hero_caption"], 0, 38, 17, t["muted"],
-                       attrs=' class="fd" style="animation-delay:.2s"'))
+    body.append(
+        c.text(
+            F["text"],
+            CONFIG["hero_caption"],
+            0,
+            38,
+            17,
+            t["muted"],
+            attrs=' class="fd" style="animation-delay:.2s"',
+        )
+    )
     ms = 16
     adv = c.measure(F["mono"], "0", ms)
     loss_scale = 2.4 / (loss(*pts[0]) - zmin)
@@ -420,15 +486,18 @@ def build_hero(F, t, alt):
     x_loss_lab = x_loss_val - adv * 5.2
     x_ep_val = x_loss_lab - adv * 6.5
     x_ep_lab = x_ep_val - adv * 6.2
-    readout = [c.text(F["mono"], "epoch", x_ep_lab, 38, ms, t["muted"]),
-               c.text(F["mono"], "loss", x_loss_lab, 38, ms, t["muted"])]
+    readout = [
+        c.text(F["mono"], "epoch", x_ep_lab, 38, ms, t["muted"]),
+        c.text(F["mono"], "loss", x_loss_lab, 38, ms, t["muted"]),
+    ]
     frames = list(range(0, n, 2))
     if frames[-1] != n - 1:
         frames.append(n - 1)
     for j, i in enumerate(frames):
         value = (loss(*pts[i]) - zmin) * loss_scale + 0.0021
-        group = (c.text(F["mono"], f"{i:03d}", x_ep_val, 38, ms, t["ink"]) +
-                 c.text(F["mono"], f"{value:.4f}", x_loss_val, 38, ms, t["ink"]))
+        group = c.text(F["mono"], f"{i:03d}", x_ep_val, 38, ms, t["ink"]) + c.text(
+            F["mono"], f"{value:.4f}", x_loss_val, 38, ms, t["ink"]
+        )
         if j == len(frames) - 1:
             style = f"animation:off {times[i]:.3f}s step-end"
             readout.append(f'<g class="fr last" style="{style}">{group}</g>')
@@ -438,8 +507,9 @@ def build_hero(F, t, alt):
             style = f"animation:on {end - start:.3f}s step-end {start:.3f}s"
             readout.append(f'<g class="fr" style="{style}">{group}</g>')
     body.append(f'<g class="fd" style="animation-delay:.2s">{"".join(readout)}</g>')
-    c.css.append(".fr{opacity:0}.fr.last{opacity:1}"
-                 "@keyframes on{0%,100%{opacity:1}}@keyframes off{0%,100%{opacity:0}}")
+    c.css.append(
+        ".fr{opacity:0}.fr.last{opacity:1}@keyframes on{0%,100%{opacity:1}}@keyframes off{0%,100%{opacity:0}}"
+    )
 
     # ── name, letter by letter ─────────────────────────────────────────────
     name = CONFIG["name"]
@@ -448,27 +518,37 @@ def build_hero(F, t, alt):
     base = 636
     cap = 0.729 * size
     letters = c.glyphs(F["display"], name, 0, base, size, track, optical=True)
-    els = "".join(f'<g class="ch" style="animation-delay:{0.35 + i * 0.075:.3f}s">{c.use(*g)}</g>'
-                  for i, g in enumerate(letters))
+    els = "".join(
+        f'<g class="ch" style="animation-delay:{0.35 + i * 0.075:.3f}s">{c.use(*g)}</g>'
+        for i, g in enumerate(letters)
+    )
     top, bottom = base - cap - 40, base + 0.32 * size
-    c.extra.append(f'<clipPath id="nm"><rect x="-20" y="{top:.0f}" width="{W + 40}" '
-                   f'height="{bottom - top:.0f}"/></clipPath>')
+    c.extra.append(
+        f'<clipPath id="nm"><rect x="-20" y="{top:.0f}" width="{W + 40}" '
+        f'height="{bottom - top:.0f}"/></clipPath>'
+    )
     body.append(f'<g clip-path="url(#nm)" fill="{t["ink"]}">{els}</g>')
-    c.css.append(".ch{animation:rise 1.4s cubic-bezier(.19,1,.22,1) both}"
-                 f"@keyframes rise{{from{{transform:translateY({bottom - top:.0f}px)}}to{{transform:none}}}}")
+    c.css.append(
+        ".ch{animation:rise 1.4s cubic-bezier(.19,1,.22,1) both}"
+        f"@keyframes rise{{from{{transform:translateY({bottom - top:.0f}px)}}to{{transform:none}}}}"
+    )
 
     # ── role + tagline, bottom right ───────────────────────────────────────
     bx, bw = 812, W - 812
     tag = c.wrap(F["text"], CONFIG["tagline"], 19, bw)
     y_last = base
-    block = [c.text(F["text"], line, bx, y_last - (len(tag) - 1 - i) * 27, 19, t["muted"])
-             for i, line in enumerate(tag)]
+    block = [
+        c.text(F["text"], line, bx, y_last - (len(tag) - 1 - i) * 27, 19, t["muted"])
+        for i, line in enumerate(tag)
+    ]
     block.append(c.text(F["medium"], CONFIG["role"], bx, y_last - (len(tag) - 1) * 27 - 40, 23, t["ink"]))
     body.append(f'<g class="fd" style="animation-delay:.95s">{"".join(block)}</g>')
 
-    c.css.append(".fd{animation:fd 1.3s cubic-bezier(.19,1,.22,1) both}"
-                 "@keyframes fd{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}"
-                 "@media (prefers-reduced-motion:reduce){.ct,.trail,.dot,.pulse,.ch,.fd,.fr{animation:none!important}}")
+    c.css.append(
+        ".fd{animation:fd 1.3s cubic-bezier(.19,1,.22,1) both}"
+        "@keyframes fd{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}"
+        "@media (prefers-reduced-motion:reduce){.ct,.trail,.dot,.pulse,.ch,.fd,.fr{animation:none!important}}"
+    )
     return c.render(H, "".join(body), alt)
 
 
@@ -476,8 +556,10 @@ def build_hero(F, t, alt):
 #  Editorial sections
 # ════════════════════════════════════════════════════════════════════════════
 def section_head(c, F, t, label, right=None):
-    out = [f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
-           c.text(F["text"], label, 0, 46, 17, t["muted"])]
+    out = [
+        f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
+        c.text(F["text"], label, 0, 46, 17, t["muted"]),
+    ]
     if right:
         out.append(c.text(F["text"], right, W, 46, 17, t["muted"], anchor="end"))
     return out
@@ -510,11 +592,11 @@ def build_stack(F, t, alt):
     y0, lh = 46, 34
     row_h = []
     for r in range(0, len(groups), cols):
-        tallest = max(len(items) for _, items in groups[r:r + cols])
+        tallest = max(len(items) for _, items in groups[r : r + cols])
         row_h.append(30 + tallest * lh + 46)
     y = y0
     for r, start in enumerate(range(0, len(groups), cols)):
-        for j, (label, items) in enumerate(groups[start:start + cols]):
+        for j, (label, items) in enumerate(groups[start : start + cols]):
             x = COL + j * colw
             body.append(c.text(F["text"], label, x, y, 17, t["muted"]))
             for k, item in enumerate(items):
@@ -537,9 +619,11 @@ def build_contact(F, t, alt):
 def build_link_row(F, t, alt, label, value, last=False):
     c = Canvas()
     H = 78
-    body = [f'<rect x="{COL}" y="0" width="{W - COL}" height="1" fill="{t["line"]}"/>',
-            c.text(F["text"], label, COL, 47, 17, t["muted"]),
-            c.text(F["text"], value, COL + 300, 48, 24, t["accent"], -0.01)]
+    body = [
+        f'<rect x="{COL}" y="0" width="{W - COL}" height="1" fill="{t["line"]}"/>',
+        c.text(F["text"], label, COL, 47, 17, t["muted"]),
+        c.text(F["text"], value, COL + 300, 48, 24, t["accent"], -0.01),
+    ]
     if last:
         body.append(f'<rect x="{COL}" y="{H - 1}" width="{W - COL}" height="1" fill="{t["line"]}"/>')
     return c.render(H, "".join(body), alt)
@@ -550,8 +634,10 @@ def build_work_row(F, t, alt, repo, head=False, last=False):
     H = 112
     body = []
     if head:
-        body += [f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
-                 c.text(F["text"], "Selected work", 0, 46, 17, t["muted"])]
+        body += [
+            f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
+            c.text(F["text"], "Selected work", 0, 46, 17, t["muted"]),
+        ]
     else:
         body.append(f'<rect x="{COL}" y="0" width="{W - COL}" height="1" fill="{t["line"]}"/>')
     body.append(c.text(F["display"], repo["name"], COL, 56, 34, t["ink"], -0.02, optical=True))
@@ -560,7 +646,9 @@ def build_work_row(F, t, alt, repo, head=False, last=False):
     if repo.get("language"):
         body.append(c.text(F["mono"], repo["language"], W, 52, 15, t["muted"], anchor="end"))
     stars = repo.get("stars", 0)
-    body.append(c.text(F["mono"], f'{stars} star{"" if stars == 1 else "s"}', W, 88, 15, t["muted"], anchor="end"))
+    body.append(
+        c.text(F["mono"], f"{stars} star{'' if stars == 1 else 's'}", W, 88, 15, t["muted"], anchor="end")
+    )
     if last:
         body.append(f'<rect x="{COL}" y="{H - 1}" width="{W - COL}" height="1" fill="{t["line"]}"/>')
     return c.render(H, "".join(body), alt)
@@ -568,10 +656,19 @@ def build_work_row(F, t, alt, repo, head=False, last=False):
 
 def build_colophon(F, t, alt, today):
     c = Canvas()
-    body = [f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
-            c.text(F["text"], f'{CONFIG["name"]}, {today.year}', 0, 46, 16, t["muted"]),
-            c.text(F["text"], "Set in Mona Sans and Monaspace Neon. Artwork generated with Python.",
-                   W, 46, 16, t["muted"], anchor="end")]
+    body = [
+        f'<rect x="0" y="0" width="{W}" height="1" fill="{t["line"]}"/>',
+        c.text(F["text"], f"{CONFIG['name']}, {today.year}", 0, 46, 16, t["muted"]),
+        c.text(
+            F["text"],
+            "Set in Mona Sans and Monaspace Neon. Artwork generated with Python.",
+            W,
+            46,
+            16,
+            t["muted"],
+            anchor="end",
+        ),
+    ]
     return c.render(70, "".join(body), alt)
 
 
@@ -588,10 +685,12 @@ def build_activity(F, t, alt, activity, today):
     body = section_head(c, F, t, "Activity")
 
     # metrics
-    metrics = [("Contributions this year", activity.contributions),
-               ("Public repositories", activity.repos),
-               ("Stars earned", activity.stars),
-               ("Followers", activity.followers)]
+    metrics = [
+        ("Contributions this year", activity.contributions),
+        ("Public repositories", activity.repos),
+        ("Stars earned", activity.stars),
+        ("Followers", activity.followers),
+    ]
     colw = (W - COL) / 4
     num_base = 46 - 0.729 * 17 + 0.729 * 60
     for j, (label, value) in enumerate(metrics):
@@ -614,25 +713,31 @@ def build_activity(F, t, alt, activity, today):
     cols, months, last_month = [], [], None
     for wi, week in enumerate(weeks):
         x = wi * pitch
-        rects = "".join(f'<rect x="{x:.1f}" y="{y_cal + 30 + (d.isoweekday() % 7) * pitch:.1f}" '
-                        f'width="{cell:.1f}" height="{cell:.1f}" rx="3.5" fill="{ramp[level]}"/>'
-                        for d, count, level in week)
+        rects = "".join(
+            f'<rect x="{x:.1f}" y="{y_cal + 30 + (d.isoweekday() % 7) * pitch:.1f}" '
+            f'width="{cell:.1f}" height="{cell:.1f}" rx="3.5" fill="{ramp[level]}"/>'
+            for d, count, level in week
+        )
         cols.append(f'<g class="wk" style="animation-delay:{0.15 + wi * 0.02:.2f}s">{rects}</g>')
         first = week[0][0]
         if first.month != last_month and first.day <= 7 and wi < len(weeks) - 2:
             months.append(c.text(F["text"], first.strftime("%b"), x, y_cal + 14, 15, t["muted"]))
             last_month = first.month
     body += months + cols
-    c.css.append(".wk{animation:wk 1s cubic-bezier(.19,1,.22,1) both}"
-                 "@keyframes wk{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}"
-                 "@media (prefers-reduced-motion:reduce){.wk{animation:none!important}}")
+    c.css.append(
+        ".wk{animation:wk 1s cubic-bezier(.19,1,.22,1) both}"
+        "@keyframes wk{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}"
+        "@media (prefers-reduced-motion:reduce){.wk{animation:none!important}}"
+    )
     y_leg = y_cal + 30 + 7 * pitch + 30
     key = 13
     lx = W - 5 * (key + 4) - c.measure(F["text"], "More", 14) - 10
     body.append(c.text(F["text"], "Less", lx - 10, y_leg, 14, t["muted"], anchor="end"))
     for i, col in enumerate(ramp):
-        body.append(f'<rect x="{lx + i * (key + 4):.1f}" y="{y_leg - key + 1:.1f}" width="{key}" '
-                    f'height="{key}" rx="2.5" fill="{col}"/>')
+        body.append(
+            f'<rect x="{lx + i * (key + 4):.1f}" y="{y_leg - key + 1:.1f}" width="{key}" '
+            f'height="{key}" rx="2.5" fill="{col}"/>'
+        )
     body.append(c.text(F["text"], "More", W, y_leg, 14, t["muted"], anchor="end"))
     body.append(c.text(F["text"], f"Updated {today.day} {today:%B %Y}", 0, y_leg, 14, t["muted"]))
 
@@ -654,8 +759,10 @@ def build_activity(F, t, alt, activity, today):
         usable = W - COL - gap * (len(top) - 1)
         for i, (name, v) in enumerate(top):
             w = usable * v / total
-            body.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 2):.1f}" height="10" rx="2" '
-                        f'fill="{shades[i]}"/>')
+            body.append(
+                f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 2):.1f}" height="10" rx="2" '
+                f'fill="{shades[i]}"/>'
+            )
             x += w + gap
         lx, ly = COL, y + 48
         for i, (name, v) in enumerate(top):
@@ -663,10 +770,20 @@ def build_activity(F, t, alt, activity, today):
             wlab = c.measure(F["text"], label, 17) + 20 + 32
             if lx + wlab > W:
                 lx, ly = COL, ly + 32
-            body.append(f'<rect x="{lx:.1f}" y="{ly - 11:.1f}" width="11" height="11" rx="2" fill="{shades[i]}"/>')
+            body.append(
+                f'<rect x="{lx:.1f}" y="{ly - 11:.1f}" width="11" height="11" rx="2" fill="{shades[i]}"/>'
+            )
             body.append(c.text(F["text"], name, lx + 20, ly, 17, t["ink"]))
-            body.append(c.text(F["text"], f"{100 * v / total:.0f}%",
-                               lx + 26 + c.measure(F["text"], name, 17), ly, 17, t["muted"]))
+            body.append(
+                c.text(
+                    F["text"],
+                    f"{100 * v / total:.0f}%",
+                    lx + 26 + c.measure(F["text"], name, 17),
+                    ly,
+                    17,
+                    t["muted"],
+                )
+            )
             lx += wlab
         y = ly + 24
     return c.render(int(y), "".join(body), alt)
@@ -677,17 +794,19 @@ def build_activity(F, t, alt, activity, today):
 # ════════════════════════════════════════════════════════════════════════════
 class Gap(Enum):
     """Space the README leaves after a Section."""
-    SECTION = auto()   # a visible break before the next Section
-    END = auto()       # one blank line, so the next picture starts a new paragraph
-    NONE = auto()      # the next picture follows directly (rows of one group)
+
+    SECTION = auto()  # a visible break before the next Section
+    END = auto()  # one blank line, so the next picture starts a new paragraph
+    NONE = auto()  # the next picture follows directly (rows of one group)
 
 
 @dataclass(frozen=True)
 class Section:
     """One strip of the profile: a light and a dark SVG, and one picture in the README."""
+
     stem: str
     alt: str
-    draw: Callable[[dict, dict, str], str]   # (fonts, Theme, alt) -> SVG
+    draw: Callable[[dict, dict, str], str]  # (fonts, Theme, alt) -> SVG
     link: Optional[str] = None
     gap: Gap = Gap.NONE
 
@@ -698,7 +817,7 @@ def row_group(rows):
 
 
 def work_alt(repo):
-    return f'{repo["name"]}. {repo["description"]}' if repo.get("description") else repo["name"]
+    return f"{repo['name']}. {repo['description']}" if repo.get("description") else repo["name"]
 
 
 def sections(activity, today):
@@ -706,22 +825,46 @@ def sections(activity, today):
     work = activity.work or []
     links = CONFIG["links"]
     return [
-        Section("hero", f'{CONFIG["name"]}, {CONFIG["role"]}. {CONFIG["tagline"]}', build_hero, gap=Gap.SECTION),
+        Section(
+            "hero", f"{CONFIG['name']}, {CONFIG['role']}. {CONFIG['tagline']}", build_hero, gap=Gap.SECTION
+        ),
         Section("about", "About. " + CONFIG["about"], build_about, gap=Gap.SECTION),
-        Section("stack", "Stack. " + ". ".join(f"{g}: {', '.join(i)}" for g, i in CONFIG["stack"]),
-                build_stack, gap=Gap.SECTION),
-        *row_group([Section(f"work-{i + 1}", work_alt(repo),
-                            partial(build_work_row, repo=repo, head=i == 0, last=i == len(work) - 1),
-                            link=repo["url"])
-                    for i, repo in enumerate(work)]),
-        Section("activity", f'Activity. {fmt_count(activity.contributions)} contributions in the last year.',
-                partial(build_activity, activity=activity, today=today), gap=Gap.SECTION),
+        Section(
+            "stack",
+            "Stack. " + ". ".join(f"{g}: {', '.join(i)}" for g, i in CONFIG["stack"]),
+            build_stack,
+            gap=Gap.SECTION,
+        ),
+        *row_group(
+            [
+                Section(
+                    f"work-{i + 1}",
+                    work_alt(repo),
+                    partial(build_work_row, repo=repo, head=i == 0, last=i == len(work) - 1),
+                    link=repo["url"],
+                )
+                for i, repo in enumerate(work)
+            ]
+        ),
+        Section(
+            "activity",
+            f"Activity. {fmt_count(activity.contributions)} contributions in the last year.",
+            partial(build_activity, activity=activity, today=today),
+            gap=Gap.SECTION,
+        ),
         Section("contact", CONFIG["contact_line"], build_contact, gap=Gap.END),
-        *row_group([Section(f"link-{label.lower()}", f"{label}: {value}",
-                            partial(build_link_row, label=label, value=value, last=i == len(links) - 1),
-                            link=url)
-                    for i, (label, value, url) in enumerate(links)]),
-        Section("colophon", f'{CONFIG["name"]}, {today.year}', partial(build_colophon, today=today)),
+        *row_group(
+            [
+                Section(
+                    f"link-{label.lower()}",
+                    f"{label}: {value}",
+                    partial(build_link_row, label=label, value=value, last=i == len(links) - 1),
+                    link=url,
+                )
+                for i, (label, value, url) in enumerate(links)
+            ]
+        ),
+        Section("colophon", f"{CONFIG['name']}, {today.year}", partial(build_colophon, today=today)),
     ]
 
 
@@ -729,15 +872,20 @@ def render_readme(svgs, branch):
     """svgs: [(Section, {Theme name: SVG})]. Each picture URL carries a hash of its SVGs to bust caches."""
     user = CONFIG["username"]
     base = f"https://raw.githubusercontent.com/{user}/{user}/{branch}/assets"
-    out = ["<!--",
-           "  This README is generated by build.py. Edit CONFIG there, not this file:",
-           "  the GitHub Action rebuilds the artwork and this README after every change",
-           "  to build.py and once a day for the live Activity numbers.",
-           "-->", ""]
+    out = [
+        "<!--",
+        "  This README is generated by build.py. Edit CONFIG there, not this file:",
+        "  the GitHub Action rebuilds the artwork and this README after every change",
+        "  to build.py and once a day for the live Activity numbers.",
+        "-->",
+        "",
+    ]
     for s, by_theme in svgs:
         v = hashlib.sha1((by_theme["dark"] + by_theme["light"]).encode()).hexdigest()[:8]
-        pic = (f'<picture><source media="(prefers-color-scheme: dark)" srcset="{base}/{s.stem}-dark.svg?v={v}" />'
-               f'<img src="{base}/{s.stem}-light.svg?v={v}" width="100%" alt="{html.escape(s.alt)}" /></picture>')
+        pic = (
+            f'<picture><source media="(prefers-color-scheme: dark)" srcset="{base}/{s.stem}-dark.svg?v={v}" />'
+            f'<img src="{base}/{s.stem}-light.svg?v={v}" width="100%" alt="{html.escape(s.alt)}" /></picture>'
+        )
         if s.link:
             pic = f'<a href="{html.escape(s.link)}">{pic}</a>'
         out.append(pic)
@@ -772,8 +920,9 @@ def write_profile(files, root):
 def main():
     F = fonts()
     print("  fetching activity")
-    activity = fetch_activity(CONFIG["username"], os.environ.get("GITHUB_TOKEN"), http,
-                              work_limit=CONFIG["work_limit"])
+    activity = fetch_activity(
+        CONFIG["username"], os.environ.get("GITHUB_TOKEN"), http, work_limit=CONFIG["work_limit"]
+    )
     if os.environ.get("CI") and not activity.complete:
         raise SystemExit("  incomplete data from GitHub; keeping the previous artwork")
     branch = os.environ.get("GITHUB_REF_NAME") or "HEAD"

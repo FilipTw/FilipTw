@@ -1,4 +1,5 @@
 """The whole profile, built from fixed inputs, must match tests/golden/."""
+
 import datetime as dt
 import json
 import re
@@ -26,8 +27,11 @@ def files():
 
 
 def read_tree(root):
-    return {p.relative_to(root).as_posix(): p.read_text(encoding="utf-8")
-            for p in sorted(root.rglob("*")) if p.is_file() and not p.name.startswith(".")}  # skip .DS_Store
+    return {
+        p.relative_to(root).as_posix(): p.read_text(encoding="utf-8")
+        for p in sorted(root.rglob("*"))
+        if p.is_file() and not p.name.startswith(".")
+    }  # skip .DS_Store
 
 
 def test_profile_matches_golden(files, request):
@@ -51,7 +55,9 @@ def test_written_profile_is_exactly_the_built_files(files, tmp_path):
 
 
 def test_readme_alt_text_matches_each_svg_title(files):
-    alts = re.findall(r'srcset="[^"]*/assets/([\w-]+)-dark\.svg\?v=\w+" /><img [^>]* alt="([^"]*)"', files["README.md"])
+    alts = re.findall(
+        r'srcset="[^"]*/assets/([\w-]+)-dark\.svg\?v=\w+" /><img [^>]* alt="([^"]*)"', files["README.md"]
+    )
     assert alts, "no pictures found in README.md"
     for stem, alt in alts:
         for theme in build.THEMES:
