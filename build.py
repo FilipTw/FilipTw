@@ -22,7 +22,7 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from enum import Enum, auto
-from functools import partial
+from functools import cache, partial
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -371,6 +371,7 @@ def loss(x, y):
     return f
 
 
+@cache  # pure and Theme-independent: both Themes share one result
 def descent(start=(110.0, 128.0), lr=2500.0, beta=0.88, steps=220, h=0.5):
     p, vel, pts = np.array(start), np.zeros(2), [np.array(start)]
     for _ in range(steps):
@@ -436,6 +437,7 @@ def inside(poly, pt):
     return hit
 
 
+@cache  # pure and Theme-independent: both Themes share one result
 def contour_lines(levels=34, res=3.0, pad=40):
     xs, ys = np.arange(-pad, W + pad, res), np.arange(-pad, HERO_H + pad, res)
     X, Y = np.meshgrid(xs, ys)
